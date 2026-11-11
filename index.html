@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Surgery Match Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an OR-board — summary strip, then calendar + watch list side by side, charts, and the full program board with an inline detail drawer. */
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --surface-2:#e9efed; --ink:#15201d; --muted:#5a6a65; --line:#d3ddda;
+  --accent:#0d6b74; --accent-soft:#d9ecee;
+  --s-applied:#8b9a95; --s-interview:#2b8a57; --s-interviewed:#16573a; --s-waitlist:#6a5ab8; --s-rejected:#b5463d; --s-withdrawn:#bcc5c2; --s-awaiting:#b9781a;
+  --warn-soft:#f7ecd9; --danger-soft:#f6e0dd; --good-soft:#dcefe4;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1413; --surface:#161f1e; --surface-2:#1d2928; --ink:#e3ebe8; --muted:#94a6a0; --line:#2a3836;
+  --accent:#55b7c0; --accent-soft:#163538;
+  --s-applied:#71817c; --s-interview:#46b37a; --s-interviewed:#8fd4ad; --s-waitlist:#9d90e0; --s-rejected:#e0736a; --s-withdrawn:#4a5754; --s-awaiting:#e0a548;
+  --warn-soft:#33281a; --danger-soft:#3a2220; --good-soft:#18301f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1413; --surface:#161f1e; --surface-2:#1d2928; --ink:#e3ebe8; --muted:#94a6a0; --line:#2a3836;
+  --accent:#55b7c0; --accent-soft:#163538;
+  --s-applied:#71817c; --s-interview:#46b37a; --s-interviewed:#8fd4ad; --s-waitlist:#9d90e0; --s-rejected:#e0736a; --s-withdrawn:#4a5754; --s-awaiting:#e0a548;
+  --warn-soft:#33281a; --danger-soft:#3a2220; --good-soft:#18301f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+h1,h2,h3{font-family:var(--f-display);font-stretch:85%;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(28px,5vw,44px);font-weight:800;line-height:1.02}
+h2{font-size:20px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+header{display:grid;gap:14px}
+.head-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.clocks{display:flex;flex-wrap:wrap;gap:8px}
+.clock{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 10px;display:grid;min-width:104px}
+.clock b{font-family:var(--f-display);font-stretch:80%;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.clock span{font-size:11.5px;color:var(--muted)}
+.sync{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--s-applied);display:inline-block}
+.sync.ok i{background:var(--s-interview)} .sync.warn i{background:var(--s-awaiting)}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.kpi{padding:14px 16px;display:grid;gap:2px;min-width:0;border-left:1px solid var(--line)}
+.kpi:first-child{border-left:0}
+.kpi .v{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:18px;font-weight:600;color:var(--muted)}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(3){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--line)}}
+
+section{display:grid;gap:12px;min-width:0}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* status bar */
+.stack{display:flex;height:34px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.stack button{border:0;padding:0;cursor:pointer;min-width:3px;position:relative;color:#fff;font-family:var(--f-mono);font-size:12px}
+.stack button:hover{filter:brightness(1.08)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px}
+.legend button{background:none;border:0;padding:2px 0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.legend button[aria-pressed="true"]{text-decoration:underline;text-underline-offset:3px}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+
+/* calendar */
+.cal{display:grid;gap:0}
+.ev{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.ev:first-child{border-top:0}
+.ev .date{font-family:var(--f-display);font-stretch:80%;line-height:1;text-align:center;border:1px solid var(--line);border-radius:4px;padding:5px 0}
+.ev .date b{display:block;font-size:22px;font-weight:800}
+.ev .date span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:var(--f-mono)}
+.ev.interview .date{border-color:var(--s-interview);background:var(--good-soft)}
+.ev.past{opacity:.55}
+.ev .t{font-weight:600}
+.ev .d{font-size:13px;color:var(--muted)}
+.ev .when{font-family:var(--f-mono);font-size:12px;text-align:right;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;line-height:1.5}
+.pill.sig{border-color:var(--accent);color:var(--accent)}
+.pill.img{background:var(--accent-soft);border-color:transparent}
+.pill.warn{background:var(--warn-soft);border-color:transparent}
+.pill.bad{background:var(--danger-soft);border-color:transparent}
+.pill.good{background:var(--good-soft);border-color:transparent}
+.cal-more{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+
+/* watch */
+.watch{display:grid;gap:0}
+.w{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.w:first-child{border-top:0}
+.w .wd{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:1px}
+.w .wt{font-weight:600}
+.w p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+
+/* charts */
+svg text{fill:var(--muted);font-family:var(--f-mono);font-size:10.5px}
+svg .lbl-strong{fill:var(--ink);font-family:var(--f-body);font-size:12px;font-weight:600}
+.chart-note{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:4px;max-width:280px;z-index:20;line-height:1.4}
+
+/* table */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:7px 10px;min-width:0}
+.filters input{flex:1 1 220px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 10px;cursor:pointer;border-left:1px solid var(--line);font-size:13px}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{text-align:left;padding:9px 10px;border-top:1px solid var(--line);vertical-align:middle}
+thead th{border-top:0;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--surface-2);position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap}
+thead th[aria-sort]::after{content:" ↕";opacity:.4}
+thead th[aria-sort="ascending"]::after{content:" ↑";opacity:1}
+thead th[aria-sort="descending"]::after{content:" ↓";opacity:1}
+tbody tr.row{cursor:pointer}
+tbody tr.row:hover td{background:var(--surface-2)}
+tbody tr.row.open td{background:var(--accent-soft)}
+td .pname{font-weight:600}
+td .loc{font-size:12px;color:var(--muted)}
+.stripe{width:4px;padding:0}
+.stsel{border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:4px 6px;font-size:13px;max-width:150px}
+.waves{display:flex;gap:4px;flex-wrap:wrap}
+.detail td{background:var(--surface-2);padding:16px}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:760px){.dgrid{grid-template-columns:minmax(0,1fr)}}
+.dgrid h3{margin-bottom:6px}
+.entries{display:grid;gap:6px;max-height:280px;overflow:auto;font-size:12.5px}
+.entries div{border-left:2px solid var(--line);padding-left:8px}
+.entries .mono{color:var(--muted);font-size:11px}
+.form{display:grid;gap:8px}
+.form label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.form select,.form input,.form textarea{border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:6px 8px;color:var(--ink);font-size:13.5px}
+.form textarea{min-height:76px;resize:vertical}
+.form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.saved{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+ul.tight{margin:4px 0 0;padding-left:18px}
+ul.tight li{margin:2px 0}
+.savebtn{padding:7px 14px;background:var(--accent);color:var(--bg);border:0;border-radius:4px;cursor:pointer;font-weight:600}
+.savebtn:disabled{opacity:.5;cursor:default}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:12.5px;display:inline-flex;gap:6px;align-items:center}
+.toolbtn:hover{border-color:var(--accent)}
+.toolbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.ghpanel{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:14px 16px;display:grid;gap:10px;max-width:640px}
+.ghpanel input{border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:7px 9px;width:100%;font-family:var(--f-mono);font-size:12.5px}
+.ghpanel p{margin:0;font-size:13px;color:var(--muted)}
+.mini{width:100%;border-collapse:collapse;min-width:0;font-size:12.5px}
+.mini th,.mini td{padding:4px 6px;border-top:1px solid var(--line)}
+.mini th{font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:500;border-top:0;background:none;position:static;cursor:default}
+.s2in{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.s2in input{width:72px;border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:4px 6px;font-family:var(--f-mono)}
+footer{font-size:12.5px;color:var(--muted);display:grid;gap:6px;border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ERAS 2027 · General Surgery · Categorical + Preliminary</div>
+    <div class="head-row">
+      <div style="display:grid;gap:6px;min-width:0">
+        <h1>Surgery Match Board</h1>
+        <div class="muted">Alfredo Verastegui Davila, MD · 45 programs applied 09/23/2026 · community data as of <span class="mono">11/10/2026</span></div>
+      </div>
+      <div class="clocks" id="clocks"></div>
+    </div>
+    <div class="tools">
+      <button class="toolbtn" id="themeBtn" type="button" aria-label="Switch theme"></button>
+      <button class="toolbtn" id="ghBtn" type="button" hidden><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Sync settings</button>
+      <span class="sync" id="sync"><i></i><span>Connecting to your saved updates…</span></span>
+    </div>
+    <div class="ghpanel" id="ghPanel" hidden>
+      <b>Sync this device with GitHub</b>
+      <p>Paste a fine-grained GitHub token that can write <b>Contents</b> on this repository only. It stays in this browser and is sent only to api.github.com. Each save commits <span class="mono">state.json</span> to the repo, and your other devices pick it up within a minute.</p>
+      <label for="ghToken" class="eyebrow">Access token</label>
+      <input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="savebtn" id="ghSave" type="button">Save token</button><button class="linkbtn" id="ghForget" type="button">Remove token from this device</button><span class="saved" id="ghMsg"></span></div>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <div class="sec-head"><h2>Where your 45 programs stand</h2><span class="muted" style="font-size:13px">Click a segment to filter the board</span></div>
+    <div class="panel">
+      <div class="stack" id="stack" role="group" aria-label="Programs by status"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section>
+      <div class="sec-head"><h2>Calendar</h2><span class="muted mono" style="font-size:12px">All times Eastern</span></div>
+      <div class="panel"><div class="cal" id="cal"></div><div class="cal-more"><button class="linkbtn" id="calToggle">Show past events</button></div></div>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Watch list</h2><span class="muted" style="font-size:13px">Your programs, invites reported since Nov 2</span></div>
+      <div class="panel"><div class="watch" id="watch"></div></div>
+    </section>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>Yield</h2></div>
+    <div class="grid3">
+      <div class="panel"><h3>Signals vs. no signal</h3><div id="chSignal"></div><p class="chart-note" id="sigNote"></p></div>
+      <div class="panel"><h3>You vs. self-reported peers</h3><div id="chPeers"></div><p class="chart-note">Median interview yield (invites ÷ applications) from the community sheet's applicant tab. Peers report one count per applicant; yours counts each program once.</p></div>
+      <div class="panel"><h3>By state</h3><div id="chState"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>How competitive are your programs?</h2><span class="muted" style="font-size:13px">Admit.org program rankings and invite reports</span></div>
+    <div class="grid2">
+      <div class="panel"><h3>Admit rank vs. interview rate</h3><div id="chScatter"></div><p class="chart-note">Interview rate = interviews ÷ applications among Admit.org users who applied there. Programs without an interview rate on Admit are left off: <span id="scatterMissing"></span>. Ringed dots are signaled.</p></div>
+      <div class="panel"><div class="sec-head"><h3>Step 2 of applicants invited to your programs</h3><label class="s2in" for="myS2">Your Step 2 <input id="myS2" type="number" min="200" max="300" inputmode="numeric" placeholder="—"></label></div><div id="chS2"></div><p class="chart-note" id="s2Note"></p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>When programs released invites</h2><span class="muted" style="font-size:13px">Community-reported invite entries per day, Sep 25 – Nov 9</span></div>
+    <div class="panel"><div id="chDaily" style="overflow-x:auto"></div><p class="chart-note">Bars count entries on the sheet's “II by Date” tab (all programs). Teal ticks mark days when one of your 45 programs was reported sending invites; hover for names.</p></div>
+  </section>
+
+  <section id="board">
+    <div class="sec-head"><h2>Program board</h2><span class="muted" style="font-size:13px" id="count"></span></div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search program, city, state" aria-label="Search programs">
+      <select id="fStatus" aria-label="Filter by status"></select>
+      <select id="fState" aria-label="Filter by state"></select>
+      <div class="seg" role="group" aria-label="Signal filter">
+        <button data-sig="all" aria-pressed="true">All</button><button data-sig="yes" aria-pressed="false">Signaled</button><button data-sig="no" aria-pressed="false">No signal</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th class="stripe" aria-label="Status color"></th>
+          <th data-k="short">Program</th>
+          <th data-k="signal">Signal</th>
+          <th data-k="tracks">Tracks</th>
+          <th data-k="status">Your status</th>
+          <th data-k="firstWave">Invite waves reported</th>
+          <th data-k="rank">Admit rank</th>
+          <th data-k="admitN">Admit invites</th>
+          <th data-k="img">IMG invited</th>
+          <th data-k="mode">Format</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div><b>Sources.</b> Your MyERAS “Programs Applied To” export (45 programs, 15 signals); your interview schedule; the 2026–2027 community General Surgery spreadsheet (II by Program, II by Date, prelim invites, rejections/waitlists, interview questions, program details, applicant info); Admit.org interview reports (1,729 invites across 316 programs) and program rankings; <a href="https://www.nrmp.org/match-calendars/main-residency-applicants/" target="_blank" rel="noopener">NRMP 2027 applicant calendar</a>.</div>
+    <div>Community entries are anonymous self-reports. “Invite waves reported” means other applicants posted invites on those dates, not that you were passed over. Your status, interview dates and notes save to this page and stay private to people you share it with.</div>
+  </footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA={"programs":[{"id":"agh","short":"Allegheny (AGH)","name":"Allegheny Health Network (AGH)","city":"Pittsburgh","state":"PA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-28","waves":["10-28"],"mode":"","entries":[{"d":"10-28","t":"Allegheny Health (AGH) (DO, -home, -away, +signal, +geo, 25x) (MD, -home, -away, -signal, +geo, 26x) (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, -signal, N/A geo, 27x) (MD, -home, -away, +signal, +geo, 25x) +1"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404112303","admit":{"n":7,"med2":257,"sig":4,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/allegheny-health-network-medical-education-consortium-agh-program-surgery-4404112303","rows":[["10-28",261,"13","MD","none"],["10-28",257,"1","MD","yes"],["10-28",257,"24","MD","none"],["10-28",257,"14","DO","yes"],["10-28",271,"35","MD","no"],["10-28",249,"25","MD","yes"],["10-28",253,"4","MD","yes"]]},"rank":{"rank":178,"name":"Allegheny Health","apps":1284,"iv":89,"ivp":7,"m":7,"med2":259},"imgAny":0,"recent":[]},{"id":"bcm","short":"Baylor COM","name":"Baylor College of Medicine","city":"Houston","state":"TX","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"In person","entries":[{"d":"10-21","t":"Baylor College of Medicine (email) (MD, -home, -away, +signal, +geo, 27x) (MD, -home, -away, +signal, +geo, 24x) (MD, -home, -away, +signal, +geo, 26x)+3 (MD, -home, -away, +signal, -geo, 26x) (MD, -home, -away, +signal, +geo, 23x) (MD, -home, -away, +signal, -geo, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Ronald Cotton","imgCount":0,"acc":"4404821334","admit":{"n":18,"med2":265,"sig":15,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/baylor-college-of-medicine-program-surgery-4404821334","rows":[["10-21",243,"6","MD","yes"],["10-21",269,"18","MD","yes"],["10-21",266,"8","MD","yes"],["10-21",266,"15","MD","yes"],["10-21",270,"10","MD","yes"],["10-21",265,"21","MD","yes"],["10-21",276,"32","MD","no"],["10-21",265,"12","MD","yes"],["10-21",248,"60","MD","yes"],["10-21",241,"11","MD","yes"],["10-21",265,"51","MD","yes"],["10-21",233,null,"MD","no"],["10-21",242,"16","MD","yes"],["10-21",268,"19","MD","no"],["10-21",null,null,"MD","yes"],["10-21",260,"26","MD","yes"],["10-21",249,"16","MD","yes"],["10-21",272,"17","MD","yes"]]},"rank":{"rank":34,"name":"Baylor","apps":1689,"iv":143,"ivp":8,"m":10,"med2":258},"imgAny":0,"recent":[]},{"id":"bswt","short":"Baylor S&W Temple","name":"Baylor Scott & White (Temple)","city":"Temple","state":"TX","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-29"],"mode":"In person","entries":[{"d":"10-21","t":"Baylor Temple (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, +signal, +geo, 25x) +1 (MD, -home, -away, +signal, -geo, 25x) (MD, -home, -away, +signal, +geo, 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404821339","admit":{"n":8,"med2":249.5,"sig":7,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/baylor-scott-white-medical-center-baylor-college-of-medicine-temple-program-surgery-4404821339","rows":[["10-29",233,null,"MD","yes"],["10-29",237,null,"MD","yes"],["10-29",242,"16","MD","yes"],["10-21",269,"18","MD","yes"],["10-21",257,"20","MD","yes"],["10-21",null,"2","MD","yes"],["10-21",null,null,"MD","no"],["10-21",272,"17","MD","yes"]]},"rank":{"rank":125,"name":"Baylor Scott and White (Temple)","apps":770,"iv":106,"ivp":14,"m":6,"med2":256},"imgAny":0,"recent":[]},{"id":"bidmc","short":"BIDMC","name":"Beth Israel Deaconess Medical Center","city":"Boston","state":"MA","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"11-02","waves":["11-02"],"mode":"Virtual","entries":[{"d":"11-02","t":"BIDMC (MD, -home, -away, +signal, N/A geo, 26x) (MD, -home, -away, + signal, N/A geo, 27x) (MD, -home, -away, +signal, +geo, 27x) +1 (MD, -home, -away, +signal, +geo, 25x) +3 (Non-US IMG, -home, -away, +signal, +geo, 27x)+1 (MD, -home, +away, +signal, +geo, 24x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4402431409","admit":{"n":5,"med2":250,"sig":5,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/beth-israel-deaconess-medical-center-program-surgery-4402431409","rows":[["11-02",234,"43","MD","yes"],["11-02",250,"82","MD","yes"],["11-02",271,"10","MD","yes"],["11-02",265,"8","MD","yes"],["11-02",248,"16","MD","yes"]]},"rank":{"rank":58,"name":"Beth Israel Deaconess","apps":1859,"iv":141,"ivp":8,"m":9,"med2":256},"imgAny":1,"recent":[{"d":"11-02","t":"Invites reported on spreadsheet and Admit.org (Step 2 234, MD, signaled, Step 2 250, MD, signaled)."}]},{"id":"bu","short":"Boston University","name":"Boston University Medical Center","city":"Boston","state":"MA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-01","waves":["10-01","10-21"],"mode":"","entries":[{"d":"10-21","t":"Boston University (MD, -home, -away, +signal, +geo, 26x) +2 MD, -home, -away, +signal, +geo, 27x) (MD, -home, -away, +signal, -geo, 23x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4402421131","admit":{"n":9,"med2":261,"sig":8,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/boston-university-medical-center-program-surgery-4402421131","rows":[["10-21",271,"35","MD","yes"],["10-21",266,"5","MD","yes"],["10-21",249,"23","MD","yes"],["10-21",252,"37","MD","yes"],["10-21",261,"13","MD","yes"],["10-21",268,"12","MD","yes"],["10-21",253,"29","MD","yes"],["10-21",265,"8","MD","yes"],["10-01",238,"18","MD","no"]]},"rank":{"rank":35,"name":"Boston University","apps":1793,"iv":156,"ivp":9,"m":5,"med2":257},"imgAny":0,"recent":[]},{"id":"conemaugh","short":"Conemaugh","name":"Conemaugh Memorial Medical Center","city":"Johnstown","state":"PA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-27"],"mode":"Virtual","entries":[],"imgInvited":false,"prelimOut":null,"rejReported":"10/27","waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404111288","admit":{"n":1,"med2":259,"sig":0,"img":1,"url":"https://residency.admit.org/surgery/cycle-results/conemaugh-memorial-medical-center-program-surgery-4404111288","rows":[["10-27",259,"3","US IMG","no"]]},"rank":{"rank":281,"name":"Conemaugh Memorial","apps":867,"iv":null,"ivp":null,"m":3,"med2":null},"imgAny":1,"recent":[]},{"id":"creighton","short":"Creighton Phoenix","name":"Creighton University SOM – Phoenix","city":"Phoenix","state":"AZ","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-19","waves":["10-19","10-21","10-23"],"mode":"In person","entries":[{"d":"10-21","t":"Creighton Phoenix (DO, -home, +away, +signal, +geo, 25x) (Non US IMG, -home, -away, -signal, -geo, 26x, prelim) (DO, -home, -away, -signal, +geo, 26x) (MD, -home, -away, +signal, +geo, 26x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Keith Paley","imgCount":1,"acc":"4400300431","admit":{"n":11,"med2":258.5,"sig":5,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/creighton-university-school-of-medicine-phoenix-program-surgery-4400300431","rows":[["10-23",268,"12","MD","no"],["10-21",258,"20","MD","no"],["10-21",null,null,"MD","no"],["10-21",258,"1","DO","yes"],["10-21",241,"11","MD","no"],["10-21",264,"8","DO","no"],["10-21",259,"6","DO","yes"],["10-21",263,"15","MD","yes"],["10-21",242,"18","DO","yes"],["10-21",249,"16","MD","no"],["10-19",260,"16","DO","yes"]]},"rank":{"rank":161,"name":"Creighton (Phoenix)","apps":1143,"iv":174,"ivp":15,"m":8,"med2":252},"imgAny":1,"recent":[]},{"id":"caseuh","short":"Case Western / UH","name":"Case Western Reserve / University Hospitals","city":"Cleveland","state":"OH","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-28","waves":["10-28"],"mode":"","entries":[{"d":"10-28","t":"Case Western Reserve University (MD, -home, -away, +signal, +geo, 27x) (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, +signal, -geo, 25x) (MD, -home, -away, +signal, +geo, 25x)+1 (DO, -home, -away, +signal, +geo, 27X)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"John Ammori","imgCount":0,"acc":"4403821399","admit":{"n":5,"med2":261,"sig":5,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/case-western-reserve-university-university-hospitals-cleveland-medical-center-program-surgery-4403821399","rows":[["10-28",261,"13","MD","yes"],["10-28",258,"4","MD","yes"],["10-28",270,"10","MD","yes"],["10-28",261,"40","MD","yes"],["10-28",274,"10","MD","yes"]]},"rank":{"rank":71,"name":"Case Western","apps":1537,"iv":165,"ivp":11,"m":7,"med2":254},"imgAny":0,"recent":[]},{"id":"ccf","short":"Cleveland Clinic","name":"Cleveland Clinic Foundation","city":"Cleveland","state":"OH","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","11-04"],"mode":"Virtual","entries":[{"d":"10-21","t":"Cleveland Clinic Foundation - Ohio (MD, -home, -away, -signal, +geo, 26x) +2 (MD, -home, -away, -signal, +geo, 23x) (MD, -home, -away, -signal, +geo, 25x) (MD, +home, +away, +signal, +geo, 24x) (MD, - home, - away, -signal, N/A geo, 23x) (MD, +home, -away, -signal, 22x) (all spots are full)"},{"d":"11-04","t":"Cleveland Clinic Ohio (Prelim) (US-IMG, -home, +away, +signal, +geo, 26x) (Non US IMG, -home, +away, +signal, N/A geo, 24x) (Non US IMG, -home +away +signal +geo, 27x) +1 (Non-US IMG,-home,+away,+signal,+geo,24x) (Non US-IMG, -home, +away, +signal, +geo, 26x) +1 (Non US-IMG, -home, +away, +signal, +geo, 25x)"}],"imgInvited":true,"prelimOut":"11/04","rejReported":null,"waitReported":"Categorical waitlist reported 10/21","mine":{"status":"interview","track":"Prelim","date":"2027-01-13"},"pd":null,"imgCount":6,"acc":"4403822257","admit":{"n":12,"med2":262.5,"sig":3,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/cleveland-clinic-foundation-program-surgery-4403822257","rows":[["10-21",267,"40","MD","yes"],["10-21",266,"5","MD","no"],["10-21",260,"10","MD","no"],["10-21",264,"10","MD","no"],["10-21",271,"21","MD","no"],["10-21",234,"43","MD","no"],["10-21",261,"13","MD","no"],["10-21",242,"6","MD","yes"],["10-21",270,"11","MD","yes"],["10-21",249,"35","MD","no"],["10-21",268,"12","MD","no"],["10-21",253,"29","MD","no"]]},"rank":{"rank":23,"name":"Cleveland Clinic","apps":1879,"iv":142,"ivp":8,"m":11,"med2":257},"imgAny":6,"recent":[{"d":"11-04","t":"Prelim invites reported on spreadsheet."}]},{"id":"ccfl","short":"Cleveland Clinic FL","name":"Cleveland Clinic Florida (Weston)","city":"Weston","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-05","waves":["10-05","10-12","10-20","11-09"],"mode":"","entries":[{"d":"10-12","t":"Cleveland Clinic FL (MD, -home/away, +signal/geo, 25x)+1"},{"d":"11-09","t":"Cleveland Clinic Weston (MD, -home, -away, +signal, +geo, 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Emanuele Lo Menzo","imgCount":0,"acc":"4401113432","admit":{"n":2,"med2":263.0,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/cleveland-clinic-foundation-florida-weston-program-surgery-4401113432","rows":[["10-20",266,"8","MD","no"],["10-05",260,"15","MD","no"]]},"rank":{"rank":109,"name":"Cleveland Clinic (Florida Weston)","apps":1463,"iv":null,"ivp":null,"m":4,"med2":null},"imgAny":0,"recent":[{"d":"11-09","t":"Invites reported on spreadsheet."}]},{"id":"emory","short":"Emory","name":"Emory University","city":"Atlanta","state":"GA","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-22"],"mode":"Virtual","entries":[{"d":"10-21","t":"Emory Email from thalamus but need to email PC directly to schedule (MD, -home,-away,+signal,+geo, 26x) (MD, -home, -away, +signal, +geo, 25x) x1 (MD, -home, -away, +signal, -geo, 25x) (MD, -home, -away, +signal, -geo, 26x)+1 (MD, -home, +away, +signal, +geo, 25x) (MD, -home, -away, +signal, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401221079","admit":{"n":15,"med2":261,"sig":14,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/emory-university-school-of-medicine-program-surgery-4401221079","rows":[["10-22",261,"40","MD","yes"],["10-21",258,"4","MD","yes"],["10-21",null,null,null,"yes"],["10-21",261,"25","MD","yes"],["10-21",249,"23","MD","none"],["10-21",257,"24","MD","yes"],["10-21",null,"10",null,"yes"],["10-21",261,"13","MD","yes"],["10-21",265,"12","MD","yes"],["10-21",null,null,"MD","yes"],["10-21",265,"3","MD","yes"],["10-21",null,null,"MD","yes"],["10-21",268,"19","MD","yes"],["10-21",266,"18","MD","yes"],["10-21",254,"12","MD","yes"]]},"rank":{"rank":18,"name":"Emory","apps":2062,"iv":149,"ivp":7,"m":10,"med2":259},"imgAny":0,"recent":[]},{"id":"fau","short":"FAU","name":"Florida Atlantic University","city":"Boca Raton","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-06","waves":["10-06","10-12","10-15"],"mode":"Virtual","entries":[{"d":"10-06","t":"FAU (MD, -home, -away, -signal, +geo, 26x) (MD, -home, -away, -signal, -geo, 26x) (MD, -home, -away, -signal, +geo, 26x) (MD, -home, -away, -signal, +geo, 23x) (MD, -home, -away, -signal, -geo, 25x) (MD, -home/away/signal, +geo, 25x) (MD, -home, -away, +signal, +geo, 24x)"},{"d":"10-12","t":"Florida Atlantic University (MD, - home, - away, - signal, + geo pref, 25x) (MD, -home, -away, -signal, +geo pref 26x)"},{"d":"10-15","t":"Florida Atlantic University (MD, -home, -away, -signal, +geo, 25x) +1 (MD, -home, -away, -signal, +geo, 23x) (DO, -home, -away, -signal, +geo, 25x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401100436","admit":{"n":4,"med2":260,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/florida-atlantic-university-charles-e-schmidt-college-of-medicine-program-surgery-4401100436","rows":[["10-15",249,"35","MD","no"],["10-06",266,"8","MD","no"],["10-06",null,null,null,"no"],["10-06",260,"15","MD","no"]]},"rank":{"rank":112,"name":"FAU Charles E. Schmidt","apps":1529,"iv":128,"ivp":8,"m":7,"med2":253},"imgAny":0,"recent":[]},{"id":"kendall","short":"HCA Kendall","name":"HCA Florida Kendall Hospital","city":"Miami","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"","entries":[{"d":"10-21","t":"HCA Kendall (Miami FL) (DO, -home, +away, +signal, +geo, 24x) (US MD, +home +geo -signal, 25x) (US-IMG, -home, -signal, +geo, 26x) (MD, -home, -away, - signal, +geo, 26x) (DO, -home, +away, +signal, +ggeo, 24x) (US-IMG, -home, -signal, -geo, 26x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":2,"acc":"4401100435","admit":{"n":4,"med2":260.5,"sig":1,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/hca-florida-healthcare-kendall-hospital-program-surgery-4401100435","rows":[["10-21",261,"51","MD","no"],["10-21",268,"12","MD","no"],["10-21",260,"15","MD","no"],["10-21",247,null,null,"yes"]]},"rank":{"rank":238,"name":"HCA Florida Healthcare (Kendall)","apps":1446,"iv":86,"ivp":6,"m":6,"med2":259},"imgAny":2,"recent":[]},{"id":"hcajfk","short":"HCA JFK / UM","name":"HCA Florida JFK / UM Miller GME Consortium","city":"Atlantis","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"11-02","waves":["11-02"],"mode":"","entries":[{"d":"11-02","t":"HCA Florida JFK / UM (MD, - home, - away, +signal, +geo, 24x) (Non-US IMG, -home, -away, -signal, +geo, 26x) prelim"}],"imgInvited":true,"prelimOut":"11/02","rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4401121431","admit":{"n":2,"med2":257,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/hca-florida-jfk-hospital-university-of-miami-miller-school-of-medicine-gme-consortium-program-surgery-4401121431","rows":[["11-02",257,"3","MD","no"],["11-02",null,null,null,"no"]]},"rank":{"rank":175,"name":"HCA Florida (JFK - Miami Miller)","apps":1123,"iv":79,"ivp":7,"m":3,"med2":249},"imgAny":1,"recent":[{"d":"11-02","t":"Prelim invites reported on spreadsheet and Admit.org (Step 2 257, MD, no signal, Step 2 —, —, no signal)."}]},{"id":"orangepark","short":"HCA Orange Park","name":"HCA Florida Orange Park Hospital","city":"Orange Park","state":"FL","signal":false,"tracks":["Categorical"],"firstWave":"10-09","waves":["10-09"],"mode":"In person","entries":[{"d":"10-09","t":"HCA Orange Park (FL) (DO, -home, -away, -signal, +geo pref, 25x) (MD, -home, -away, -signal, -geo pref, 23x) (MD, -home, -away, -signal, +geo pref, 26x) (MD, -home/away/signal, +geo, 25x) (MD, -home, -away, +signal, +geo, 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401100448","admit":{"n":3,"med2":247,"sig":1,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/hca-florida-orange-park-hospital-program-surgery-4401100448","rows":[["10-09",248,"4","MD","no"],["10-09",240,"8","DO","yes"],["10-09",247,null,null,"no"]]},"rank":{"rank":338,"name":"HCA Florida (Orange Park)","apps":810,"iv":72,"ivp":9,"m":3,"med2":246},"imgAny":0,"recent":[]},{"id":"clearlake","short":"HCA Clear Lake","name":"HCA Houston Healthcare / UH (Clear Lake)","city":"Webster","state":"TX","signal":false,"tracks":["Categorical"],"firstWave":"10-21","waves":["10-21","11-04"],"mode":"","entries":[{"d":"10-21","t":"HCA Clear Lake/ Houston (DO, -home, -away, +signal, +geo, 24x) (MD, -home,-away, -singal, -geo, 24x) (DO, -home, -away, -signal, +geo, 24x) (MD, -home, -away, -signal, +geo, 25x) (MD, -home, -away, -signal, +geo, 26x)"},{"d":"11-04","t":"HCA Houston Healthcare (Clear Lake) (US MD, -home, -away, -signal, +geo, 2xx) (DO, -home, -away, -signal, +geo, 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404800007","admit":{"n":2,"med2":249.5,"sig":2,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/hca-houston-healthcare-university-of-houston-program-surgery-4404800007","rows":[["10-21",243,"6","MD","yes"],["10-21",256,"52","MD","yes"]]},"rank":{"rank":null,"name":"HCA University of Houston (Houston)","apps":628,"iv":45,"ivp":7,"m":3,"med2":245},"imgAny":0,"recent":[{"d":"11-04","t":"Invites reported on spreadsheet."}]},{"id":"methodist","short":"Houston Methodist","name":"Houston Methodist Hospital","city":"Houston","state":"TX","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23","10-27"],"mode":"In person","entries":[{"d":"10-23","t":"Houston Methodist (MD, -home, -away, +geo, +signal, 26x) (MD, -home, -away, -geo, -signal, 25x) (MD, +home, -away, +geo, +signal, 26x) (MD, -home, -away, +geo, +signal, 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Sylvia Martinez","imgCount":0,"acc":"4404822335","admit":{"n":5,"med2":258,"sig":4,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/houston-methodist-hospital-medical-center-program-surgery-4404822335","rows":[["10-27",254,"2","MD","yes"],["10-23",258,"20","MD","yes"],["10-23",265,"21","MD","yes"],["10-23",251,"23","MD","no"],["10-23",261,"40","MD","yes"]]},"rank":{"rank":160,"name":"Houston Methodist","apps":1470,"iv":68,"ivp":5,"m":6,"med2":257},"imgAny":0,"recent":[]},{"id":"jhu","short":"Johns Hopkins","name":"Johns Hopkins University","city":"Baltimore","state":"MD","signal":true,"tracks":["Categorical","Prelim (2-yr)"],"firstWave":"10-21","waves":["10-21"],"mode":"In person","entries":[{"d":"10-21","t":"Johns Hopkins (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, +signal, -geo, 26x) (MD, -home, -away, +signal, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4402321392","admit":{"n":6,"med2":269,"sig":5,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/johns-hopkins-university-program-surgery-4402321392","rows":[["10-21",264,"33","MD","yes"],["10-21",269,"18","MD","yes"],["10-21",272,"100","MD","yes"],["10-21",276,"32","MD","no"],["10-21",null,"10",null,"yes"],["10-21",265,"51","MD","yes"]]},"rank":{"rank":3,"name":"Johns Hopkins","apps":1848,"iv":133,"ivp":7,"m":6,"med2":259},"imgAny":0,"recent":[]},{"id":"bwh","short":"Brigham (MGB)","name":"Mass General Brigham / Brigham and Women's","city":"Boston","state":"MA","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-27","waves":["10-27"],"mode":"Virtual","entries":[],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4402421135","admit":{"n":2,"med2":266.5,"sig":2,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/mass-general-brigham-brigham-and-womens-hospital-program-surgery-4402421135","rows":[["10-27",268,null,"MD","yes"],["10-27",265,"12","MD","yes"]]},"rank":{"rank":6,"name":"Brigham and Women's Hospital","apps":1431,"iv":null,"ivp":null,"m":9,"med2":null},"imgAny":0,"recent":[]},{"id":"mayojax","short":"Mayo Jacksonville","name":"Mayo Clinic (Jacksonville)","city":"Jacksonville","state":"FL","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-15","waves":["10-15","11-10"],"mode":"In person","entries":[{"d":"10-15","t":"Jacksonville (mayo?) (MD, -home, -away, -signal, +geo, 27x) +2 (MD, -home, -away, +signal, +geo, 25x) +2 (MD, -home, -away, +signal, +geo, 26x) + 1"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Dorin Colibaseanu","imgCount":0,"acc":"4401121405","admit":{"n":7,"med2":269,"sig":3,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/mayo-clinic-college-of-medicine-and-science-jacksonville-program-surgery-4401121405","rows":[["11-10",269,"18","MD","no"],["10-15",266,"8","MD","yes"],["10-15",272,"100","MD","no"],["10-15",257,"3","MD","yes"],["10-15",280,"15","MD","no"],["10-15",256,"14","MD","yes"],["10-15",270,"10","MD","no"]]},"rank":{"rank":50,"name":"Mayo Clinic (Jacksonville)","apps":1821,"iv":125,"ivp":7,"m":5,"med2":259},"imgAny":0,"recent":[{"d":"11-10","t":"Invites reported on Admit.org (Step 2 269, MD, no signal)."}]},{"id":"medstarb","short":"MedStar Baltimore","name":"MedStar Georgetown (Baltimore)","city":"Baltimore","state":"MD","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-27","waves":["10-27","10-28"],"mode":"In person & virtual","entries":[{"d":"10-27","t":"MedStar Health (Baltimore) (MD, -home, -away, signal, +geo, 25x) (MD, -home, -away, -signal, -geo, 24x) (US-IMG, -home, -away, -signal, +geo, 26x)"},{"d":"10-28","t":"Medstar Georgetown Baltimore (MD, -home, -away, -signal, +geo, +LOI, 24x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4402321127","admit":{"n":1,"med2":273,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/medstar-health-georgetown-university-baltimore-program-surgery-4402321127","rows":[["10-27",273,"8","MD","no"]]},"rank":{"rank":190,"name":"Georgetown MedStar (Baltimore)","apps":1451,"iv":93,"ivp":6,"m":4,"med2":253},"imgAny":1,"recent":[]},{"id":"mayoaz","short":"Mayo Arizona","name":"Mayo Clinic (Arizona)","city":"Phoenix","state":"AZ","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-26"],"mode":"In person","entries":[{"d":"10-26","t":"Mayo (Arizona)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":"Megan Nelson","imgCount":0,"acc":"4400321402","admit":{"n":5,"med2":267.0,"sig":1,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/mayo-clinic-college-of-medicine-and-science-arizona-program-surgery-4400321402","rows":[["10-21",269,"18","MD","no"],["10-21",265,"21","MD","yes"],["10-21",241,"11","MD","no"],["10-21",null,null,"MD","no"],["10-21",271,"10","MD","no"]]},"rank":{"rank":42,"name":"Mayo Clinic (Arizona)","apps":1660,"iv":88,"ivp":5,"m":5,"med2":256},"imgAny":0,"recent":[]},{"id":"mayoroch","short":"Mayo Rochester","name":"Mayo Clinic (Rochester)","city":"Rochester","state":"MN","signal":true,"tracks":["Categorical","Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-23"],"mode":"Cat in person · Prelim virtual","entries":[{"d":"10-21","t":"Mayo Clinic (Rochester) (MD, -home, -away, -signal, -geo, 26x) MD, -home, -away, -signal, +geo, 26x (MD - home, -away, -signal, -geo, 27x) +2 (MD, -home, -away, +signal, -geo, 27x) (MD, -home, -away, +signal, -geo, 26x)+2 (MD, -home, -away, +signal, +geo, 25x) +2 (MD, -home, -away, -signal, 27x) (Non US IMG, -home, -away, +signal, -geo, 25x, prelim)+1 (US IMG, -home, -away, +signal, +geo, 24x) (MD, -home, -away, -signal, N/A geo, 27x) (US IMG, -home, +away, +signal, -geo, 22x, prelim) (Non US IMG, -home, -away, +signal, -geo, 26x, prelim) +3"},{"d":"10-23","t":"Mayo Rochester (MD, -home, -away, +signal, -geo, 25x)"}],"imgInvited":true,"prelimOut":"10/21","rejReported":null,"waitReported":null,"mine":{"status":"interview","track":"Prelim","date":"2027-01-12"},"pd":"Dr. Mariela Rivera","imgCount":4,"acc":"4402621163","admit":{"n":20,"med2":268.0,"sig":12,"img":2,"url":"https://residency.admit.org/surgery/cycle-results/mayo-clinic-college-of-medicine-and-science-rochester-program-surgery-4402621163","rows":[["10-21",267,"33","MD","none"],["10-21",268,"12","MD","no"],["10-21",266,"8","MD","yes"],["10-21",270,"10","MD","no"],["10-21",267,"40","MD","no"],["10-21",269,"18","MD","no"],["10-21",275,"30","MD","yes"],["10-21",272,"100","MD","yes"],["10-21",272,"3","Non-US IMG","yes"],["10-21",276,"32","MD","no"],["10-21",266,"8","MD","yes"],["10-21",265,"51","MD","yes"],["10-21",227,"8","US IMG","yes"],["10-21",250,"10","MD","yes"],["10-21",273,"25","MD","yes"],["10-21",268,"19","MD","yes"],["10-21",261,"40","MD","no"],["10-21",265,"21","MD","yes"],["10-21",271,"10","MD","yes"],["10-21",274,"10","MD","no"]]},"rank":{"rank":13,"name":"Mayo Clinic (Rochester)","apps":1634,"iv":245,"ivp":15,"m":11,"med2":258},"imgAny":6,"recent":[]},{"id":"morehouse","short":"Morehouse","name":"Morehouse School of Medicine","city":"Atlanta","state":"GA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"In person","entries":[{"d":"10-21","t":"Morehouse (MD, -home, -away, +signal, +geo, 24x)x2 (MD, -home, -away, -signal, -geo, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401221397","admit":{"n":1,"med2":248,"sig":1,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/morehouse-school-of-medicine-program-surgery-4401221397","rows":[["10-21",248,"4","MD","yes"]]},"rank":{"rank":207,"name":"Morehouse","apps":1161,"iv":77,"ivp":7,"m":3,"med2":245},"imgAny":0,"recent":[]},{"id":"msmc","short":"Mount Sinai Miami","name":"Mount Sinai Medical Center of Florida","city":"Miami Beach","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"09-30","waves":["09-30","10-02","10-07","10-08"],"mode":"Virtual","entries":[{"d":"09-30","t":"MSMC (Florida) (MD, -home, -away, -signal, -geo, 23x)"},{"d":"10-02","t":"MSMC (Florida) (MD, -home, -away, -signal, +geo pref, 26x) x3 (MD, -home, -away, -signal, -geo, 24x)"},{"d":"10-07","t":"MSMC (Florida) (MD, -home, -away, -signal, +geo pref, 25x) (MD, -home, -away, - signal, +geo, 26x)"},{"d":"10-08","t":"MSMC (Florida) (MD, -home, -away, -signal, +geo pref, 23x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401122075","admit":{"n":3,"med2":274.5,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/mount-sinai-medical-center-of-florida-program-surgery-4401122075","rows":[["10-08",null,null,null,"no"],["10-07",268,"12","MD","no"],["10-02",281,"30","MD","no"]]},"rank":{"rank":241,"name":"Mount Sinai (Florida)","apps":1380,"iv":null,"ivp":null,"m":3,"med2":null},"imgAny":0,"recent":[]},{"id":"nega","short":"NE Georgia","name":"Northeast Georgia Medical Center","city":"Gainesville","state":"GA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-22","waves":["10-22"],"mode":"","entries":[{"d":"10-22","t":"Northeast Georgia Medical Center (DO, -home, -away, +signal, +geo, 24x) (Non-US IMG, -home, -away, -signal, +geo, 26x) (prelim)"}],"imgInvited":true,"prelimOut":"10/22","rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4401200399","admit":{"n":2,"med2":249.5,"sig":2,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/northeast-georgia-medical-center-program-surgery-4401200399","rows":[["10-22",257,"3","MD","yes"],["10-22",242,"12","MD","yes"]]},"rank":{"rank":149,"name":"Northeast Georgia Med Ctr","apps":1337,"iv":85,"ivp":6,"m":6,"med2":246},"imgAny":1,"recent":[]},{"id":"metro","short":"MetroHealth","name":"MetroHealth / Case Western","city":"Cleveland","state":"OH","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23"],"mode":"Virtual","entries":[{"d":"10-23","t":"MetroHealth (MD, +home, -away, -signal, +geo, 24x) (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, -signal, N/A geo, 27x) (MD, - home, - away, -signal, N/A geo, 23x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4403800001","admit":{"n":3,"med2":266,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/the-metrohealth-system-case-western-reserve-university-program-surgery-4403800001","rows":[["10-23",266,"8","MD","no"],["10-23",248,"7","MD","no"],["10-23",267,"8","MD","no"]]},"rank":{"rank":73,"name":"Case Western (MetroHealth)","apps":1119,"iv":94,"ivp":8,"m":4,"med2":250},"imgAny":0,"recent":[]},{"id":"upmcmercy","short":"UPMC Mercy","name":"UPMC Medical Education / Mercy","city":"Pittsburgh","state":"PA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"Virtual","entries":[],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404112305","admit":{"n":7,"med2":259.5,"sig":3,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/upmc-medical-education-mercy-program-surgery-4404112305","rows":[["10-21",258,"4","MD","no"],["10-21",261,"13","MD","yes"],["10-21",257,"12","MD","no"],["10-21",265,"2","MD","no"],["10-21",271,"3","MD","no"],["10-21",249,"25","MD","yes"],["10-21",null,null,null,"yes"]]},"rank":{"rank":194,"name":"UPMC (Mercy)","apps":1229,"iv":null,"ivp":null,"m":4,"med2":null},"imgAny":0,"recent":[]},{"id":"farrell","short":"UPMC Farrell","name":"UPMC Medical Education (Farrell)","city":"Farrell","state":"PA","signal":false,"tracks":["Categorical"],"firstWave":"10-21","waves":["10-21","10-23"],"mode":"","entries":[{"d":"10-21","t":"UPMC Farrell (DO, -home, -away, -signal, +geo, 260)"},{"d":"10-23","t":"UPMC Farrell (DO, -home, -away, -signal, +geo, 25x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404100402","admit":{"n":2,"med2":258.5,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/upmc-medical-education-farrell-program-surgery-4404100402","rows":[["10-23",257,"14","DO","no"],["10-21",260,"11","DO","no"]]},"rank":{"rank":286,"name":"UPMC (Farrell)","apps":896,"iv":null,"ivp":null,"m":2,"med2":null},"imgAny":0,"recent":[]},{"id":"upmc","short":"UPMC Pittsburgh","name":"UPMC Medical Education (Pittsburgh)","city":"Pittsburgh","state":"PA","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"In person","entries":[{"d":"10-21","t":"UPMC - Pitt (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, -signal, +geo, 26x)x2 (MD, -home, -away, +signal, -geo, 26x)x2 (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, +signal, N/A geo, 27x) (MD, -home, -away, +signal, -geo, 24x) (MD, -home, -away, -signal, -geo, 27x)+1"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404121304","admit":{"n":15,"med2":266,"sig":10,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/upmc-medical-education-pittsburgh-program-surgery-4404121304","rows":[["10-21",267,"33","MD","yes"],["10-21",258,"20","MD","yes"],["10-21",266,"18","MD","no"],["10-21",270,"10","MD","no"],["10-21",269,"18","MD","yes"],["10-21",268,"12","MD","yes"],["10-21",257,"24","MD","none"],["10-21",276,"32","MD","no"],["10-21",261,"13","MD","yes"],["10-21",265,"12","MD","yes"],["10-21",273,"25","MD","yes"],["10-21",242,"16","MD","yes"],["10-21",268,"19","MD","yes"],["10-21",261,"25","MD","no"],["10-21",265,"2","MD","yes"]]},"rank":{"rank":21,"name":"UPMC","apps":1789,"iv":114,"ivp":6,"m":7,"med2":262},"imgAny":0,"recent":[]},{"id":"ucsd","short":"UC San Diego","name":"UC San Diego Medical Center","city":"La Jolla","state":"CA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"Virtual","entries":[{"d":"10-21","t":"UCSD (MD, -home, -away, +signal, +geo, 26x) +3 (MD, -home, -away, +signal, +geo, 27x) +1 (MD, -home, -away, -signal, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4400521048","admit":{"n":8,"med2":262.5,"sig":6,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-california-san-diego-medical-center-program-surgery-4400521048","rows":[["10-21",255,"4","MD","yes"],["10-21",264,"33","MD","no"],["10-21",265,null,null,"yes"],["10-21",267,"40","MD","yes"],["10-21",241,"11","MD","no"],["10-21",261,"8","MD","yes"],["10-21",271,"3","MD","yes"],["10-21",260,"26","MD","yes"]]},"rank":{"rank":54,"name":"UCSD","apps":1370,"iv":null,"ivp":null,"m":7,"med2":null},"imgAny":0,"recent":[]},{"id":"ucsf","short":"UCSF","name":"UC San Francisco","city":"San Francisco","state":"CA","signal":false,"tracks":["Categorical","Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23","10-28"],"mode":"In person","entries":[{"d":"10-23","t":"UCSF (email to schedule tomorrow) (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, -signal, +geo, 26x) (MD, -home, +away, +signal, +geo, 25x) (MD, -home, -away, -signal, +geo, 25x)"},{"d":"10-23","t":"UCSF (MD, -home, -away, +signal, 27x)+1 (MD, -home, -away, +signal, -geo, 26x) (MD, -home, +away, +signal, 27x) (MD, -home, -away, +signal, +geo, 26x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4400521052","admit":{"n":8,"med2":267.0,"sig":7,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-california-san-francisco-program-surgery-4400521052","rows":[["10-28",267,"33","MD","yes"],["10-23",276,"32","MD","yes"],["10-23",267,"40","MD","yes"],["10-23",269,"18","MD","yes"],["10-23",250,"82","MD","no"],["10-23",265,"12","MD","yes"],["10-23",265,"51","MD","yes"],["10-23",268,"12","MD","yes"]]},"rank":{"rank":4,"name":"UCSF","apps":1245,"iv":76,"ivp":6,"m":8,"med2":259},"imgAny":0,"recent":[]},{"id":"uconn","short":"UConn","name":"University of Connecticut","city":"Farmington","state":"CT","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23"],"mode":"In person","entries":[{"d":"10-23","t":"UConn (MD, -home, -away, +geo, 26x) (MD -home -away +geo +signal 25x) +3 (MD, -home, -away, +signal, +geo, 24x) (DO, -home, -away, +signal, +geo, 25x) (MD, -home, -away, +signal, NA geo, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4400821390","admit":{"n":5,"med2":248,"sig":5,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-connecticut-program-surgery-4400821390","rows":[["10-23",246,"2","DO","yes"],["10-23",243,"23","MD","yes"],["10-23",253,"29","MD","yes"],["10-23",248,"7","MD","yes"],["10-23",261,"13","MD","yes"]]},"rank":{"rank":111,"name":"University of Connecticut","apps":1688,"iv":113,"ivp":7,"m":8,"med2":257},"imgAny":0,"recent":[]},{"id":"ufjax","short":"UF Jacksonville","name":"University of Florida – Jacksonville","city":"Jacksonville","state":"FL","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-27","waves":["10-27","11-04"],"mode":"Virtual","entries":[{"d":"10-27","t":"UF Jacksonville (DO, -home, -away, +signal, +geo, 24x)"},{"d":"11-04","t":"UF Jacksonville (prelim) (MD, -home, -away, +signal, 26x) (Non-US IMG -home -away +signal +geo, 27x)"}],"imgInvited":true,"prelimOut":"11/04","rejReported":null,"waitReported":null,"mine":null,"pd":"Dr. Puri","imgCount":1,"acc":"4401121073","admit":{"n":4,"med2":260.5,"sig":4,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-florida-college-of-medicine-jacksonville-program-surgery-4401121073","rows":[["10-27",257,"3","MD","yes"],["10-27",266,"8","MD","yes"],["10-27",260,"15","MD","yes"],["10-27",261,"25","MD","yes"]]},"rank":{"rank":135,"name":"University of Florida (Jacksonville)","apps":1741,"iv":156,"ivp":9,"m":5,"med2":252},"imgAny":1,"recent":[{"d":"11-04","t":"Prelim invites reported on spreadsheet."}]},{"id":"umd","short":"U Maryland","name":"University of Maryland","city":"Baltimore","state":"MD","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"","entries":[{"d":"10-21","t":"University of Maryland - email (MD, -home, -away, +signal, -geo, 26x) (MD, -home, -away, +signal, +geo, 25x) (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, +signal, +geo, 27x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4402321128","admit":{"n":6,"med2":265.5,"sig":6,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-maryland-program-surgery-4402321128","rows":[["10-21",266,"8","MD","yes"],["10-21",276,"6","MD","yes"],["10-21",262,"25","MD","yes"],["10-21",261,"13","MD","yes"],["10-21",265,"12","MD","yes"],["10-21",273,"8","MD","yes"]]},"rank":{"rank":44,"name":"University of Maryland","apps":1721,"iv":null,"ivp":null,"m":6,"med2":null},"imgAny":0,"recent":[]},{"id":"umhc","short":"UM Ft. Lauderdale","name":"University of Miami Hospital and Clinics","city":"Fort Lauderdale","state":"FL","signal":false,"tracks":["Categorical"],"firstWave":"10-22","waves":["10-22"],"mode":"","entries":[{"d":"10-22","t":"UM Holy Cross (Ft Lauderdale) (MD -home/away +geo/signal 25x) (MD -home/away +geo/signal 24x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401100444","admit":{"n":1,"med2":null,"sig":0,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-miami-hospital-and-clinics-program-surgery-4401100444","rows":[["10-22",null,null,null,"no"]]},"rank":{"rank":307,"name":"University of Miami","apps":1277,"iv":55,"ivp":4,"m":3,"med2":235},"imgAny":0,"recent":[]},{"id":"umjackson","short":"UMiami / Jackson","name":"University of Miami / Jackson Health","city":"Miami","state":"FL","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23","11-05"],"mode":"In person","entries":[{"d":"10-23","t":"UMiami/Jackson (MD, +home, -away, -signal, +geo, 26x) (MD, +home, -away, -signal, N/A geo, 27x) (MD, -home, -away, +signal, +geo, 26x) (MD, -home, -away, +signal, +geo, 25x) +1"},{"d":"11-05","t":"UM Jackson Memorial"}],"imgInvited":false,"prelimOut":"11/05","rejReported":null,"waitReported":null,"mine":{"status":"interview","track":"Prelim","date":"2026-11-11"},"pd":"Dr. Danny Sleeman","imgCount":0,"acc":"4401121074","admit":{"n":9,"med2":261,"sig":7,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-miami-jackson-health-system-program-surgery-4401121074","rows":[["10-23",232,"40","MD","yes"],["10-23",266,"8","MD","no"],["10-23",266,"15","MD","yes"],["10-23",261,"40","MD","yes"],["10-23",257,"24","MD","yes"],["10-23",null,null,null,"yes"],["10-23",null,null,"MD","yes"],["10-23",268,"12","MD","no"],["10-23",238,"18","MD","yes"]]},"rank":{"rank":32,"name":"University of Miami Jackson","apps":2095,"iv":395,"ivp":19,"m":7,"med2":254},"imgAny":0,"recent":[{"d":"11-05","t":"Invites reported on spreadsheet."}]},{"id":"umn","short":"U Minnesota","name":"University of Minnesota","city":"Minneapolis","state":"MN","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"09-01","waves":["09-01","10-21","10-22"],"mode":"Virtual","entries":[{"d":"10-21","t":"University of Minnesota (MD, -home, -away, +signal, NA geo, 27x) (DO, -home, -away, -signal, +geo, 26x) (DO, -home, -away, +signal, -geo, 25x)"},{"d":"10-22","t":"University of Minnesota (MD, -home, -away, -signal, -geo, 27x) (MD, -home, -away, +signal, +geo, 24x) (MD, -home, -away, +signal, -geo, 25x) (Non US IMG, -home, -away, -signal, -geo, 26x) (DO, -home, -away, -signal, +geo, 26x) (MD, -home, -away, -signal, -geo, 25x) (MD, -home, -away, -signal, -geo, 26x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4402631162","admit":{"n":9,"med2":264,"sig":3,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-minnesota-program-surgery-4402631162","rows":[["10-22",258,"4","MD","no"],["10-22",266,"5","DO","yes"],["10-22",266,"8","MD","no"],["10-22",260,"26","MD","no"],["10-22",252,"18","MD","yes"],["10-21",268,null,"MD","none"],["10-21",264,"8","DO","no"],["10-21",270,"11","MD","none"],["09-01",257,"7","MD","yes"]]},"rank":{"rank":70,"name":"University of Minnesota","apps":1358,"iv":139,"ivp":10,"m":9,"med2":256},"imgAny":1,"recent":[]},{"id":"utsa","short":"UT San Antonio","name":"UT Health San Antonio","city":"San Antonio","state":"TX","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-23","waves":["10-23"],"mode":"Both","entries":[{"d":"10-23","t":"UT San Antonio (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, -signal, -geo, 25x) (MD, -home, -away, +signal, -geo, 26x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404821338","admit":{"n":6,"med2":263.0,"sig":3,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-texas-health-science-center-san-antonio-joe-and-teresa-lozano-long-school-of-medicine-program-surgery-4404821338","rows":[["10-23",266,"8","MD","no"],["10-23",258,"19","MD","no"],["10-23",266,"11","MD","yes"],["10-23",268,"19","MD","yes"],["10-23",254,null,null,"yes"],["10-23",260,"10","MD","no"]]},"rank":{"rank":57,"name":"UT HSC Long (San Antonio)","apps":1407,"iv":null,"ivp":null,"m":7,"med2":null},"imgAny":0,"recent":[]},{"id":"uth","short":"UTHealth Houston","name":"UTHealth Houston (McGovern)","city":"Houston","state":"TX","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-26","waves":["10-26","10-28"],"mode":"Virtual","entries":[{"d":"10-26","t":"UT HOUSTON (MCGOVERN) (MD,-home,-away,+signal,+geo,26x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":{"status":"interview","track":"Categorical","date":"2026-11-12"},"pd":"Dr. Sasha Adams","imgCount":0,"acc":"4404821337","admit":{"n":6,"med2":272,"sig":6,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-texas-health-science-center-at-houston-program-surgery-4404821337","rows":[["10-28",269,"18","MD","yes"],["10-26",276,"32","MD","yes"],["10-26",266,"8","MD","yes"],["10-26",null,null,"MD","yes"],["10-26",273,"25","MD","yes"],["10-26",272,"17","MD","yes"]]},"rank":{"rank":36,"name":"UT HSC (Houston)","apps":1570,"iv":null,"ivp":null,"m":8,"med2":null},"imgAny":0,"recent":[]},{"id":"tyler","short":"UT Tyler","name":"UT Health Science Center at Tyler","city":"Tyler","state":"TX","signal":false,"tracks":["Categorical"],"firstWave":"10-21","waves":["10-21","10-26"],"mode":"Virtual","entries":[],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404800438","admit":{"n":4,"med2":258,"sig":0,"img":1,"url":"https://residency.admit.org/surgery/cycle-results/university-of-texas-health-science-center-at-tyler-program-surgery-4404800438","rows":[["10-26",258,"12","MD","no"],["10-21",257,"2","US IMG","no"],["10-21",null,null,"MD","no"],["10-21",272,"17","MD","no"]]},"rank":{"rank":253,"name":"UT Tyler","apps":890,"iv":51,"ivp":6,"m":3,"med2":248},"imgAny":1,"recent":[]},{"id":"utmb","short":"UTMB","name":"UT Medical Branch (Galveston)","city":"Galveston","state":"TX","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21"],"mode":"In person","entries":[{"d":"10-21","t":"UTMB (MD, -home, +away, +signal, +geo, 25x) (non-US IMG -home, -away, +signal, No geo, 24x) (MD, +home, -away, +signal, -geo, 25x)"}],"imgInvited":true,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":1,"acc":"4404811333","admit":{"n":7,"med2":265.0,"sig":7,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-texas-medical-branch-hospitals-program-surgery-4404811333","rows":[["10-21",265,"21","MD","yes"],["10-21",256,"52","MD","yes"],["10-21",265,"51","MD","yes"],["10-21",257,"20","MD","yes"],["10-21",null,null,"MD","yes"],["10-21",267,"8","MD","yes"],["10-21",272,"17","MD","yes"]]},"rank":{"rank":157,"name":"UT Medical Branch","apps":1301,"iv":null,"ivp":null,"m":7,"med2":null},"imgAny":1,"recent":[]},{"id":"utsw","short":"UT Southwestern","name":"UT Southwestern Medical Center","city":"Dallas","state":"TX","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-20","waves":["10-20","10-21","11-06"],"mode":"Both","entries":[{"d":"10-21","t":"UTSW (part one) (MD, -home, -away, +signal, -geo, 27x) (MD, -home, -away, +signal, -geo, 23x) (MD, -home, -away, +signal, +geo, 26x) +2 (MD, -home, -away, +signal, -geo, 26x) +1 (DO, -home, -away, +signal, +geo, 24x) (MD, -home, -away, +signal, +geo, 27x) (MD, -home, -away, +signal, +geo, 24x)"},{"d":"11-06","t":"UTSW Round 2 (cat) (MD, -home, -away, +signal, -geo, 26x) +2 (MD, -home, -away, +signal, +geo, 26x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4404821331","admit":{"n":18,"med2":267.0,"sig":18,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/university-of-texas-southwestern-medical-center-program-surgery-4404821331","rows":[["10-21",null,null,null,"yes"],["10-21",276,"6","MD","yes"],["10-21",266,"15","MD","yes"],["10-21",254,null,null,"yes"],["10-21",276,"32","MD","yes"],["10-21",248,"60","MD","yes"],["10-21",241,"11","MD","yes"],["10-21",266,"8","MD","yes"],["10-21",270,"11","MD","yes"],["10-21",269,"10","MD","yes"],["10-21",272,"8","MD","yes"],["10-21",261,"40","MD","yes"],["10-21",274,"10","MD","yes"],["10-21",260,"26","MD","yes"],["10-21",265,"51","MD","yes"],["10-21",268,"12","MD","yes"],["10-21",null,null,"MD","yes"],["10-20",275,"30","MD","yes"]]},"rank":{"rank":10,"name":"UTSW","apps":2020,"iv":288,"ivp":14,"m":13,"med2":257},"imgAny":0,"recent":[{"d":"11-06","t":"Round 2 invites reported on spreadsheet."}]},{"id":"wellstar","short":"Wellstar Kennestone","name":"Wellstar Kennestone Regional Medical Center","city":"Marietta","state":"GA","signal":false,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","10-23"],"mode":"Virtual","entries":[{"d":"10-21","t":"Wellstar GA (DO, -home, +away, +signal, +geo, 24x) (MD, -home, -away, +signal, +geo, 23x) (MD, -home, - away, +signal, +geo, +24x)"},{"d":"10-23","t":"Wellstar Health System/Wellstar Kennestone Regional Medical Center (MD, -home, -away, -signal, +geo, 23x)"}],"imgInvited":false,"prelimOut":null,"rejReported":null,"waitReported":null,"mine":null,"pd":null,"imgCount":0,"acc":"4401222080","admit":{"n":1,"med2":248,"sig":1,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/wellstar-health-system-wellstar-kennestone-regional-medical-center-program-surgery-4401222080","rows":[["10-21",248,"4","MD","yes"]]},"rank":{"rank":303,"name":"Wellstar Health System (Kennestone)","apps":949,"iv":64,"ivp":7,"m":4,"med2":244},"imgAny":0,"recent":[]},{"id":"yale","short":"Yale","name":"Yale–New Haven Medical Center","city":"New Haven","state":"CT","signal":true,"tracks":["Categorical","Preliminary"],"firstWave":"10-21","waves":["10-21","11-05"],"mode":"Virtual","entries":[{"d":"10-21","t":"Yale - New Haven Medical Center (MD, -home, -away, +signal, +geo, 26x) +2 (MD, -home, -away, +signal, +geo, 24x) (MD, -home, -away, -signal, +geo, 27x) (MD, -home, -away, +signal, +geo, 27x) (MD, -home, -away, +geo, +signal, 24x) (MD, -home, -away, +geo, +signal, 25x) (US IMG, -home, -away, +signal, +geo, 24x, prelim)"},{"d":"11-05","t":"Yale SSTP (MD, -home, -away, +signal, +geo, 25x)"}],"imgInvited":true,"prelimOut":"10/21","rejReported":null,"waitReported":null,"mine":{"status":"interview","track":"Prelim","date":"2027-01-15"},"pd":"Dr. Kristin Oliveira","imgCount":1,"acc":"4400821064","admit":{"n":14,"med2":261.0,"sig":14,"img":0,"url":"https://residency.admit.org/surgery/cycle-results/yale-new-haven-medical-center-program-surgery-4400821064","rows":[["10-21",267,"33","MD","yes"],["10-21",276,"6","MD","yes"],["10-21",262,"25","MD","yes"],["10-21",239,"12","MD","yes"],["10-21",261,"13","MD","yes"],["10-21",261,"13","MD","yes"],["10-21",265,"12","MD","yes"],["10-21",238,"18","MD","yes"],["10-21",261,"15","MD","yes"],["10-21",261,"8","MD","yes"],["10-21",271,"10","MD","yes"],["10-21",250,"82","MD","yes"],["10-21",263,"16","MD","yes"],["10-21",248,"16","MD","yes"]]},"rank":{"rank":30,"name":"Yale","apps":1782,"iv":131,"ivp":7,"m":10,"med2":259},"imgAny":1,"recent":[{"d":"11-05","t":"Invites reported on spreadsheet."}]}],"daily":[["2026-09-25",2],["2026-09-28",2],["2026-09-29",2],["2026-09-30",2],["2026-10-01",2],["2026-10-02",2],["2026-10-05",2],["2026-10-06",6],["2026-10-07",8],["2026-10-08",6],["2026-10-09",3],["2026-10-10",1],["2026-10-12",5],["2026-10-13",5],["2026-10-14",6],["2026-10-15",7],["2026-10-16",5],["2026-10-18",2],["2026-10-19",12],["2026-10-20",10],["2026-10-21",149],["2026-10-22",18],["2026-10-23",35],["2026-10-25",1],["2026-10-26",15],["2026-10-27",8],["2026-10-28",14],["2026-10-29",9],["2026-10-30",11],["2026-11-02",9],["2026-11-03",5],["2026-11-04",7],["2026-11-05",6],["2026-11-06",7],["2026-11-09",7]],"peers":[{"g":"US MD","n":104,"ii":10.5,"apps":61.5,"y":0.14900110987791343},{"g":"DO","n":25,"ii":5.0,"apps":72.0,"y":0.10576923076923077},{"g":"IMG","n":8,"ii":1.5,"apps":151.0,"y":0.01162251655629139}],"imgPeers":[{"s2":225.0,"apps":45.0,"ii":null,"pubs":5.0},{"s2":245.0,"apps":100.0,"ii":1.0,"pubs":1.0},{"s2":257.0,"apps":50.0,"ii":null,"pubs":15.0},{"s2":258.0,"apps":90.0,"ii":null,"pubs":4.0},{"s2":262.0,"apps":101.0,"ii":6.0,"pubs":0.0},{"s2":264.0,"apps":100.0,"ii":7.0,"pubs":6.0},{"s2":266.0,"apps":270.0,"ii":0.0,"pubs":5.0},{"s2":267.0,"apps":209.0,"ii":1.0,"pubs":6.0},{"s2":272.0,"apps":151.0,"ii":2.0,"pubs":35.0},{"s2":null,"apps":40.0,"ii":null,"pubs":8.0},{"s2":251.0,"apps":82.0,"ii":null,"pubs":1.0},{"s2":263.0,"apps":150.0,"ii":null,"pubs":1.0},{"s2":240.0,"apps":105.0,"ii":null,"pubs":6.0},{"s2":259.0,"apps":270.0,"ii":1.0,"pubs":38.0},{"s2":260.0,"apps":151.0,"ii":7.0,"pubs":2.0}],"nResp":162,"admitGlobal":{"n":1729,"programs":316,"med2":259,"sigShare":0.5853094274146906,"img":46,"s2":[258,269,261,235,259,243,262,262,262,262,271,247,255,255,255,255,255,255,265,269,232,249,247,247,247,247,243,243,257,249,267,267,267,267,267,267,267,267,267,267,267,267,267,267,267,267,267,267,267,248,248,267,271,252,252,258,258,258,267,267,249,257,257,257,269,269,248,248,268,267,257,260,260,250,248,269,269,257,269,269,256,269,251,257,266,266,266,266,247,242,257,248,253,266,257,264,264,264,264,264,264,264,264,264,264,257,248,259,257,266,266,248,264,271,260,271,234,234,234,234,258,242,256,257,257,245,268,266,261,268,268,268,258,250,250,271,243,265,243,243,243,270,248,263,260,249,249,261,261,261,261,261,261,261,261,261,261,269,269,269,269,269,269,269,269,269,269,269,269,269,269,269,269,253,241,266,269,263,257,257,258,258,258,258,258,258,258,258,258,258,258,258,258,258,254,254,254,254,254,270,271,271,249,240,234,261,252,275,237,237,266,271,260,267,276,260,269,250,245,248,248,241,269,269,253,246,257,251,260,242,258,258,269,246,242,255,256,263,253,274,257,259,259,260,233,271,237,270,258,258,258,258,258,258,258,258,258,258,258,258,258,258,258,242,252,248,261,261,258,264,258,266,266,266,266,266,266,266,266,257,260,242,269,266,249,249,266,266,243,243,243,243,249,249,249,261,261,265,257,276,276,276,276,276,276,276,258,258,247,241,246,246,248,271,239,246,259,234,257,271,239,257,242,267,242,259,266,266,266,266,266,266,266,266,266,266,266,266,266,242,266,266,266,266,266,266,266,258,258,270,261,261,261,261,274,274,271,271,261,261,261,238,238,266,254,266,266,266,266,266,266,266,238,257,271,253,249,253,260,265,265,265,265,265,260,260,260,260,260,260,260,260,256,271,247,248,248,248,268,258,266,269,273,257,266,266,261,265,264,264,264,264,266,266,266,266,266,266,266,266,265,265,255,261,255,255,255,255,255,255,255,239,271,271,271,271,271,271,271,271,271,271,235,253,251,276,270,270,270,270,270,270,270,270,270,251,276,276,276,276,276,266,265,265,261,261,257,233,233,233,233,275,253,253,251,245,251,251,251,251,251,251,251,251,251,258,248,258,250,237,273,262,262,262,262,262,262,262,262,262,262,262,262,262,262,262,262,272,268,267,267,267,267,267,268,267,267,267,268,267,267,267,267,267,267,267,267,267,267,260,271,261,266,243,253,257,236,250,261,266,269,267,267,250,269,269,269,269,269,269,269,269,269,269,269,269,257,257,257,257,257,257,257,257,257,257,261,248,248,248,248,248,248,248,248,248,255,261,238,268,251,257,257,257,257,257,266,266,266,266,266,266,266,266,266,266,266,268,261,251,261,261,261,261,249,249,249,249,249,249,249,249,249,237,237,237,237,237,237,237,237,266,249,275,275,275,275,241,249,249,249,250,273,273,265,265,265,274,260,268,268,268,265,268,248,256,256,256,254,260,254,254,260,260,260,260,260,260,260,239,239,239,239,239,239,239,239,239,239,257,258,258,263,260,260,264,265,248,265,267,257,258,259,237,237,237,271,248,268,268,234,234,234,234,271,243,243,261,248,240,253,253,248,253,248,261,260,242,248,261,246,246,246,246,246,246,266,266,258,250,238,261,271,264,271,271,271,271,252,271,264,242,259,257,252,252,252,252,252,252,257,257,257,257,257,257,257,257,261,260,273,267,267,268,238,264,250,258,258,258,258,266,266,266,266,257,243,234,272,272,272,272,272,272,248,248,265,265,265,265,260,260,260,257,257,257,257,248,257,248,248,248,257,248,257,248,248,248,248,248,248,248,248,248,248,249,249,258,258,249,249,261,261,261,261,261,261,261,261,261,261,261,261,261,257,250,250,250,250,250,250,258,274,272,264,253,253,253,253,253,276,276,276,276,276,276,276,276,276,260,239,271,268,268,268,268,268,268,258,265,260,261,261,261,252,261,261,242,261,261,261,261,261,261,261,261,261,261,265,265,265,265,265,265,265,243,243,242,265,247,239,266,263,263,251,251,251,251,251,260,258,258,258,258,258,258,258,258,258,258,255,255,255,255,255,270,258,248,248,248,248,248,248,248,248,248,248,248,248,263,260,243,239,239,239,239,241,241,241,241,241,241,241,241,241,241,241,256,256,256,256,274,274,274,259,256,274,238,249,240,249,240,240,240,259,265,259,259,271,250,273,273,273,273,238,274,235,235,235,235,235,250,242,266,266,266,266,266,266,266,266,266,264,264,264,264,264,264,264,264,264,264,264,264,264,249,249,249,249,249,249,249,249,256,248,273,273,273,273,273,265,242,242,242,257,236,236,236,236,236,236,236,257,257,261,259,259,259,259,259,259,258,258,258,258,258,258,258,258,258,242,242,242,242,242,267,267,267,242,267,267,267,242,267,221,221,274,258,258,258,258,258,258,258,258,242,242,257,257,257,257,257,257,257,257,274,250,241,260,246,256,256,256,263,261,261,241,259,272,265,242,270,270,270,270,245,270,270,270,261,249,249,249,249,269,249,269,269,249,269,269,249,249,267,272,269,238,250,238,238,238,238,238,238,238,238,266,266,266,266,266,266,266,266,269,265,265,265,258,258,258,258,258,258,258,263,263,263,263,263,263,263,263,265,265,265,265,265,253,261,261,261,257,257,257,265,257,257,257,257,268,265,265,265,271,265,267,270,260,267,271,253,260,248,248,248,260,258,248,248,258,258,248,272,260,265,265,265,265,265,265,260,274,227,259,259,253,267,233,259,259,259,259,259,259,256,261,247,259,233,261,243,233,271,249,249,265,250,265,265,265,265,265,260,265,265,268,259,260,261,242,242,242,260,252,249,256,260,256,256,256,256,256,256,260,260,260,260,260,271,271,260,250,249,249,259,259,261,261,261,261,261,261,261,261,261,240,261,246,268,246,246,266,271,271,247,258,258,257,258,258,272,257,257,272,257,252,268,268,260,250,250,250,260,250,254,241,250,242,227,260,265,265,260,274,248,260,266,273,273,261,249,273,271,242,242,242,241,268,268,268,268,252,249,257,241,272,259,259,259,259,259,268,261,261,271,271,256,271,271,271,271,260,258,265,271,248,248,247,274,260,272,250,272,243,274,243,266,243,253,260,260,267,260,260,260,256,256,261,256,256,256,256,256,256,272,266,247,249,252,254,250,254,254,271,248,243,253,253,261,267,261,260,260,266,252,271,272,265,248,265,249,259,272,272,258,258,266,247,247,258,247,271,241,271,271,249,247,249,247,247,247,249,249,272,266,266,265,266,266,241,241,267,243,243,253,248,253,261,272,261,261,261,268,261,250,250,265,253,265,263,263,272,260,248,248,260,248,260,267,260,260,267,267,267,241,267,260,272,272,261,260,260,260,274,274,260,261,260,260,242,265,252,268,261,261,265,258,257,242,258,248,257,257,273,263,253,248,259,268,263,263,266,261,258,256,268,250,241,270,270,268,258,275,257,257,257,280,280,280,258,258,272,274,258,258,260,260,260,255,260,242,256,256,260,259,259,233,260,272,272,272,257,251,251,265,274,270,258,243,243,255,258,257,257,257,257,242,261,257,248,267,256,266,252,257,241,266,252,235,249,231,245,260,242,260,275,261,266,238,268,251,266,233,249,266,261,261,266,241,249,257,260,271,260,250,257,250,269,245,260,233,242,281,281,257,242,267,255,249,261,250,260,262,257,260,260,253,254,267,257],"mineS2":[261,257,257,257,271,249,253,243,269,266,266,270,265,276,265,248,241,265,233,242,268,260,249,272,233,237,242,269,257,272,234,250,271,265,248,271,266,249,252,261,268,253,265,238,259,268,258,258,241,264,259,263,242,249,260,261,258,270,261,274,267,266,260,264,271,234,261,242,270,249,268,253,266,260,261,258,261,249,257,261,265,265,268,266,254,249,266,260,261,268,260,247,257,248,240,247,243,256,254,258,265,251,261,264,269,272,276,265,268,265,269,266,272,257,280,256,270,273,269,265,241,271,267,268,266,270,267,269,275,272,272,276,266,265,227,250,273,268,261,265,271,274,248,268,281,257,242,266,248,267,258,261,257,265,271,249,257,260,267,258,266,270,269,268,257,276,261,265,273,242,268,261,265,255,264,265,267,241,261,271,260,267,276,267,269,250,265,265,268,246,243,253,248,261,257,266,260,261,266,276,262,261,265,273,232,266,266,261,257,268,238,258,266,266,260,252,268,264,270,257,266,258,266,268,254,260,269,276,266,273,272,258,257,272,265,256,265,257,267,272,276,266,254,276,248,241,266,270,269,272,261,274,260,265,268,275,248,267,276,262,239,261,261,265,238,261,261,271,250,263,248]}};
+const STATUSES=[
+ {k:"interview",l:"Interview scheduled",c:"--s-interview"},
+ {k:"interviewed",l:"Interviewed",c:"--s-interviewed"},
+ {k:"waitlist",l:"Waitlisted",c:"--s-waitlist"},
+ {k:"applied",l:"Applied — no word",c:"--s-applied"},
+ {k:"rejected",l:"Rejected",c:"--s-rejected"},
+ {k:"withdrawn",l:"Withdrawn",c:"--s-withdrawn"},
+];
+const SMAP=Object.fromEntries(STATUSES.map(s=>[s.k,s]));
+const PROGS=DATA.programs;
+const BYID=Object.fromEntries(PROGS.map(p=>[p.id,p]));
+const FACULTY={
+ umjackson:{confirmed:["Dr. Danny Sleeman — PD; trauma & surgical critical care (4:30–4:40 PM)"],format:"5 × 10 min faculty/resident (community report)",qs:"Tell me about yourself; why Miami; why surgery; fun; a difficult patient; something not on your resume; what scares you about residency; how an experience shaped your choice of surgery."},
+ uth:{confirmed:["Dr. Sasha Adams — PD; acute care surgery (group intro)"],grid:["Dr. Curtis Wray — surgical oncology","Dr. Dalya Ferguson — abdominal wall reconstruction","Dr. Anna Mydlowska — APD","Dr. Peter Walker — MIS / GI","Dr. Jessica Buicko Lopez — endocrine","Dr. Melissa Stewart — APD","Dr. Laura Moore — general surgery","Dr. Erik Askenasy — general surgery","Dr. Stefanos Millas — APD","Dr. Gabrielle Hatton — acute care"],todo:"Sign and return the interviewee acknowledgement to Kimberly.A.Curtis@uth.tmc.edu before Nov 12. Zoom display name: Verastegui Davila, Alfredo."},
+ mayoroch:{grid:["Dr. Mariela Rivera — PD (not confirmed as interviewer)"]},
+ ccf:{grid:["Dr. Ajita Prabhu — abdominal wall reconstruction","Dr. Joseph Trunzo — residency leadership","Dr. Daniel Joyce — APD, preliminary residents"]},
+ yale:{grid:["Dr. Kristin Oliveira — PD; trauma / critical care","Dr. Andrew Dhanasopon — thoracic; APD","Dr. Haddon Pantel — colorectal; APD","Dr. Kate Savoie — trauma / critical care; APD","Dr. Daniel Solomon — pediatric; APD"]},
+};
+const EVENTS=[
+ {at:"2026-11-11T15:00:00-05:00",end:"5:00 PM",prog:"umjackson",type:"interview",t:"UMiami / Jackson — prelim interview",d:"Virtual. Dr. Sleeman 4:30–4:40 PM; other slots TBD. Zoom ID 992 5958 7051 — use the full link and passcode in Thalamus."},
+ {at:"2026-11-11T20:00:00-05:00",end:"10:00 PM",prog:"uth",type:"social",t:"UTHealth Houston — resident social",d:"Optional.",link:"https://UTHealth.zoomgov.com/j/1659713490"},
+ {at:"2026-11-12T14:30:00-05:00",end:"5:05 PM",prog:"uth",type:"interview",t:"UTHealth Houston — categorical interview",d:"Virtual. Dr. Adams group intro; check the updated grid for your interviewers. Wrap-up until 6:00 PM.",link:"https://UTHealth.zoomgov.com/j/1651823812"},
+ {at:"2026-11-17T21:15:00-05:00",end:"9:30 PM",type:"talk",t:"ObesityWeek 2026 — your presentation",d:"Cardiac Structural Recovery with GLP-1 Receptor Agonists in Heart Failure"},
+ {at:"2026-11-19T20:00:00-05:00",end:"9:15 PM",prog:"yale",type:"social",t:"Yale — resident social",d:"Current residents.",link:"https://yale.zoom.us/j/92844201187"},
+ {at:"2026-11-20T21:00:00-05:00",type:"admin",t:"MyERAS down for maintenance",d:"Until Sat Nov 21, 9:00 AM."},
+ {at:"2027-01-12T08:30:00-05:00",end:"2:00 PM",prog:"mayoroch",type:"interview",t:"Mayo Clinic Rochester — prelim interview",d:"Virtual. Faculty TBD."},
+ {at:"2027-01-13T07:30:00-05:00",end:"12:30 PM",prog:"ccf",type:"interview",t:"Cleveland Clinic — prelim interview",d:"Virtual. Faculty TBD."},
+ {at:"2027-01-15T09:15:00-05:00",end:"3:15 PM",prog:"yale",type:"interview",t:"Yale–New Haven — prelim interview",d:"Virtual. Faculty TBD."},
+ {at:"2027-02-01T12:00:00-05:00",type:"nrmp",t:"NRMP rank order list opens",d:"12:00 PM ET."},
+ {at:"2027-03-03T21:00:00-05:00",type:"nrmp",t:"Rank order list certification deadline",d:"9:00 PM ET."},
+ {at:"2027-03-15T10:00:00-04:00",type:"nrmp",t:"Match Week — match status released",d:"10:00 AM ET."},
+ {at:"2027-03-19T12:00:00-04:00",type:"nrmp",t:"Match Day",d:"12:00 PM ET."},
+];
+
+/* ---------- state ---------- */
+function defaults(p){
+  if(p.mine) return {status:"interview",track:p.mine.track,ivDate:p.mine.date,note:""};
+  return {status:"applied",track:"",ivDate:"",note:""};
+}
+let saved={};          // id -> stored doc
+let store=null;        // {kind:'db'|'local'}
+let readOnly=false;
+function st(id){return Object.assign(defaults(BYID[id]),saved[id]||{})}
+
+const ui={status:"all",state:"all",sig:"all",q:"",sort:{k:"status",dir:1},open:null,showPast:false};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const md=s=>{const [m,d]=s.split("-");return `${MON[+m-1]} ${+d}`};
+function daysUntil(dt){const n=new Date();const a=new Date(n.getFullYear(),n.getMonth(),n.getDate());const b=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate());return Math.round((b-a)/864e5)}
+const tip=$("#tip");
+function showTip(e,html){tip.innerHTML=html;tip.hidden=false;const x=Math.min(e.clientX+12,innerWidth-290);tip.style.left=x+"px";tip.style.top=(e.clientY+14)+"px"}
+function hideTip(){tip.hidden=true}
+
+/* ---------- header clocks + KPIs ---------- */
+function renderClocks(){
+  const items=[["2027-03-03T21:00:00-05:00","ROL deadline · Mar 3"],["2027-03-15T10:00:00-04:00","Match Week · Mar 15"],["2027-03-19T12:00:00-04:00","Match Day · Mar 19"]];
+  $("#clocks").innerHTML=items.map(([d,l])=>`<div class="clock"><b>${daysUntil(new Date(d))}</b><span>days to ${l}</span></div>`).join("");
+}
+function renderKPIs(){
+  const all=PROGS.map(p=>({p,s:st(p.id)}));
+  const iv=all.filter(x=>x.s.status==="interview"||x.s.status==="interviewed");
+  const cat=iv.filter(x=>/cat/i.test(x.s.track)).length, pre=iv.filter(x=>/pre/i.test(x.s.track)).length;
+  const y=iv.length/45*100;
+  const imgY=DATA.peers.find(g=>g.g==="IMG");
+  const now=new Date();
+  const next=EVENTS.filter(e=>e.type==="interview"&&new Date(e.at)>now)[0];
+  const nd=next?daysUntil(new Date(next.at)):null;
+  const nextP=next?BYID[next.prog]:null;
+  $("#kpis").innerHTML=`
+   <div class="kpi"><span class="eyebrow">Applied</span><span class="v num">45</span><span class="l">15 signals · ${PROGS.filter(p=>p.tracks.some(t=>/Prelim/.test(t))).length} with a prelim track</span></div>
+   <div class="kpi"><span class="eyebrow">Interviews</span><span class="v num">${iv.length}</span><span class="l">${cat} categorical · ${pre} prelim${iv.length-cat-pre>0?` · ${iv.length-cat-pre} other`:""}</span></div>
+   <div class="kpi"><span class="eyebrow">Yield</span><span class="v num">${y.toFixed(1)}<small>%</small></span><span class="l">IMG peer median ${(imgY.y*100).toFixed(1)}% (n=${imgY.n})</span></div>
+   <div class="kpi"><span class="eyebrow">Next interview</span><span class="v num">${next?(nd===0?"Today":nd===1?"1 <small>day</small>":nd+" <small>days</small>"):"—"}</span><span class="l">${next?esc(nextP.short)+" · "+new Date(next.at).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",timeZone:"America/New_York"}):"None scheduled"}</span></div>`;
+}
+
+/* ---------- status bar ---------- */
+function renderStack(){
+  const counts=Object.fromEntries(STATUSES.map(s=>[s.k,0]));
+  PROGS.forEach(p=>counts[st(p.id).status]++);
+  $("#stack").innerHTML=STATUSES.filter(s=>counts[s.k]).map(s=>`<button data-st="${s.k}" style="flex:${counts[s.k]};background:var(${s.c})" aria-label="${s.l}: ${counts[s.k]}">${counts[s.k]>=3?counts[s.k]:""}</button>`).join("");
+  $("#legend").innerHTML=STATUSES.map(s=>`<button data-st="${s.k}" aria-pressed="${ui.status===s.k}"><span class="dot" style="background:var(${s.c})"></span>${s.l} <b class="num">${counts[s.k]}</b></button>`).join("");
+  document.querySelectorAll("#stack button,#legend button").forEach(b=>b.onclick=()=>{ui.status=ui.status===b.dataset.st?"all":b.dataset.st;$("#fStatus").value=ui.status;renderStack();renderTable();if(ui.status!=="all")$("#board").scrollIntoView({behavior:"smooth"})});
+}
+
+/* ---------- calendar ---------- */
+function renderCal(){
+  const now=new Date();
+  const evs=EVENTS.filter(e=>ui.showPast||new Date(e.at).getTime()+3*3600e3>now.getTime());
+  $("#cal").innerHTML=evs.map(e=>{
+    const dt=new Date(e.at);const past=dt.getTime()+3*3600e3<now.getTime();
+    const dd=daysUntil(dt);
+    const time=dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York"});
+    const mon=dt.toLocaleDateString("en-US",{month:"short",timeZone:"America/New_York"});
+    const day=dt.toLocaleDateString("en-US",{day:"numeric",timeZone:"America/New_York"});
+    const rel=past?"done":dd===0?"today":dd===1?"tomorrow":`in ${dd} d`;
+    let action="";
+    if(past&&e.type==="interview"&&st(e.prog).status==="interview"&&!readOnly) action=` <button class="linkbtn" data-done="${e.prog}">Mark interviewed</button>`;
+    return `<div class="ev ${e.type}${past?" past":""}">
+      <div class="date"><b>${day}</b><span>${mon}</span></div>
+      <div style="min-width:0"><div class="t">${esc(e.t)}</div><div class="d">${esc(e.d)}${e.link?` <a href="${e.link}" target="_blank" rel="noopener">Zoom link</a>`:""}${action}</div></div>
+      <div class="when">${time}${e.end?"–"+e.end:""}<br><span class="muted">${rel}</span></div></div>`;
+  }).join("")||`<p class="muted">Nothing upcoming.</p>`;
+  $("#calToggle").textContent=ui.showPast?"Hide past events":"Show past events";
+  document.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>save(b.dataset.done,{status:"interviewed"}));
+}
+$("#calToggle").onclick=()=>{ui.showPast=!ui.showPast;renderCal()};
+
+/* ---------- watch list ---------- */
+function renderWatch(){
+  const items=[];
+  PROGS.forEach(p=>(p.recent||[]).forEach(r=>items.push({d:r.d,id:p.id,t:r.t})));
+  items.sort((a,b)=>b.d.localeCompare(a.d));
+  $("#watch").innerHTML=items.map(it=>{
+    const p=BYID[it.id];const s=st(p.id);
+    const yours=s.status==="interview"||s.status==="interviewed";
+    const tag=yours?`<span class="pill good">You're in</span>`:p.signal?`<span class="pill sig">Signaled</span>`:"";
+    const act=yours?"":" Check email, Thalamus and spam.";
+    return `<div class="w"><div class="wd">${md(it.d)}</div><div style="min-width:0"><div class="wt">${esc(p.short)} ${tag}</div><p>${esc(it.t)}${act}</p></div></div>`;
+  }).join("");
+}
+
+/* ---------- charts ---------- */
+function hbar(el,rows,max,fmt){
+  const W=360,rh=34,lw=110,H=rows.length*rh+8;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="bar chart">`;
+  rows.forEach((r,i)=>{
+    const y=i*rh+4,bw=Math.max(2,(W-lw-60)*r.v/max);
+    s+=`<text x="0" y="${y+15}" class="lbl-strong">${esc(r.l)}</text><text x="0" y="${y+28}">${esc(r.sub||"")}</text>`;
+    s+=`<rect x="${lw}" y="${y+5}" width="${W-lw-60}" height="16" rx="2" fill="${css("--surface-2")}"/>`;
+    s+=`<rect x="${lw}" y="${y+5}" width="${bw}" height="16" rx="2" fill="${r.c}"/>`;
+    s+=`<text x="${lw+bw+6}" y="${y+17}" style="fill:${css("--ink")}">${fmt(r)}</text>`;
+  });
+  el.innerHTML=s+"</svg>";
+}
+function renderCharts(){
+  const iv=id=>["interview","interviewed"].includes(st(id).status);
+  const sig=PROGS.filter(p=>p.signal),ns=PROGS.filter(p=>!p.signal);
+  const a=sig.filter(p=>iv(p.id)).length,b=ns.filter(p=>iv(p.id)).length;
+  hbar($("#chSignal"),[
+    {l:"Signaled",sub:`${a} of ${sig.length}`,v:a/sig.length,c:css("--accent")},
+    {l:"No signal",sub:`${b} of ${ns.length}`,v:b/ns.length,c:css("--s-applied")}],
+    Math.max(.4,a/sig.length,b/ns.length),r=>(r.v*100).toFixed(0)+"%");
+  $("#sigNote").textContent=`Every interview so far came from a signaled program. ${sig.filter(p=>!iv(p.id)).length} signaled programs are still open: ${sig.filter(p=>!iv(p.id)).map(p=>p.short).join(", ")}.`;
+  const mine=PROGS.filter(p=>iv(p.id)).length;
+  const rows=[{l:"You",sub:`${mine} of 45`,v:mine/45,c:css("--accent")}].concat(DATA.peers.slice().reverse().map(g=>({l:g.g,sub:`n=${g.n} · ${g.ii} of ${g.apps}`,v:g.y,c:css("--s-applied")})));
+  hbar($("#chPeers"),rows,Math.max(...rows.map(r=>r.v))*1.15,r=>(r.v*100).toFixed(1)+"%");
+  // by state stacked
+  const states={};PROGS.forEach(p=>{(states[p.state]??=[]).push(st(p.id).status)});
+  const keys=Object.keys(states).sort((x,y)=>states[y].length-states[x].length||x.localeCompare(y));
+  const W=360,rh=20,lw=34,H=keys.length*rh+4,mx=Math.max(...keys.map(k=>states[k].length));
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Programs by state">`;
+  keys.forEach((k,i)=>{
+    const y=i*rh+2;let x=lw;
+    s+=`<text x="0" y="${y+13}" class="lbl-strong" style="font-family:var(--f-mono);font-size:11px">${k}</text>`;
+    STATUSES.forEach(S=>{const n=states[k].filter(v=>v===S.k).length;if(!n)return;const w=(W-lw-30)*n/mx;s+=`<rect x="${x}" y="${y+3}" width="${w-1}" height="13" fill="${css(S.c)}" data-tip="${k} · ${S.l}: ${n}"/>`;x+=w});
+    s+=`<text x="${x+5}" y="${y+14}">${states[k].length}</text>`;
+  });
+  $("#chState").innerHTML=s+"</svg>";
+  // daily
+  const days=DATA.daily;const byDay={};PROGS.forEach(p=>p.waves.forEach(w=>(byDay[w]??=[]).push(p.short)));
+  const start=new Date(2026,8,25),end=new Date(2026,10,10);const list=[];
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const k=String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");list.push(k)}
+  const cnt=Object.fromEntries(days.map(([d,n])=>[d.slice(5),n]));
+  const max=Math.max(...days.map(x=>x[1]));
+  const DW=Math.max(720,list.length*16),DH=230,pb=46,pt=14,pl=34,bw=(DW-pl-6)/list.length;
+  const y=v=>pt+(DH-pt-pb)*(1-Math.sqrt(v/max));
+  let g=`<svg viewBox="0 0 ${DW} ${DH}" width="${DW}" style="max-width:none;display:block" role="img" aria-label="Invite entries per day">`;
+  [0,10,50,100,150].forEach(t=>{if(t>max)return;g+=`<line x1="${pl}" x2="${DW}" y1="${y(t)}" y2="${y(t)}" stroke="${css("--line")}" stroke-width="1"/><text x="${pl-6}" y="${y(t)+3}" text-anchor="end">${t}</text>`});
+  list.forEach((k,i)=>{
+    const n=cnt[k]||0,x=pl+i*bw;
+    if(n)g+=`<rect x="${x+1.5}" y="${y(n)}" width="${bw-3}" height="${y(0)-y(n)}" fill="${css("--s-applied")}" opacity=".55" data-tip="${md(k)}: ${n} invite entries"/>`;
+    if(byDay[k]){const m=byDay[k].length;g+=`<rect x="${x+1.5}" y="${y(0)+6}" width="${bw-3}" height="${Math.min(30,6+m*3)}" rx="1.5" fill="${css("--accent")}" data-tip="${md(k)} — your programs: ${esc(byDay[k].join(", "))}"/>`;if(m>2)g+=`<text x="${x+bw/2}" y="${y(0)+6+Math.min(30,6+m*3)+11}" text-anchor="middle" style="fill:${css("--accent")}">${m}</text>`}
+    const dd=+k.slice(3);if(dd===1||dd===15||k==="09-25")g+=`<text x="${x+bw/2}" y="${DH-2}" text-anchor="middle">${md(k)}</text>`;
+  });
+  g+=`<text x="${pl+list.indexOf("10-21")*bw+bw+4}" y="${y(cnt["10-21"])+10}" style="fill:${css("--ink")}">Oct 21 · ERAS common release · ${cnt["10-21"]} entries</text>`;
+  $("#chDaily").innerHTML=g+"</svg>";
+  // competitiveness scatter
+  {
+    const pts=PROGS.filter(p=>p.rank?.rank&&p.rank?.ivp!=null);
+    $("#scatterMissing").textContent=PROGS.filter(p=>!(p.rank?.rank&&p.rank?.ivp!=null)).map(p=>p.short).join(", ");
+    const W=520,H=300,pl=40,pr=12,pt=12,pb=34;
+    const xmax=350,ymax=Math.max(20,...pts.map(p=>p.rank.ivp))+2;
+    const X=v=>pl+(W-pl-pr)*v/xmax,Y=v=>pt+(H-pt-pb)*(1-v/ymax);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Admit rank versus interview rate">`;
+    for(let v=0;v<=ymax;v+=5)s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--line")}"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${v}%</text>`;
+    [1,50,100,150,200,250,300,350].forEach(v=>s+=`<text x="${X(v)}" y="${H-16}" text-anchor="middle">#${v}</text>`);
+    s+=`<text x="${(W+pl)/2}" y="${H-2}" text-anchor="middle">Admit.org rank (lower = more competitive)</text>`;
+    pts.slice().sort((a,b)=>(a.signal?1:0)-(b.signal?1:0)).forEach(p=>{
+      const S=SMAP[st(p.id).status],cx=X(p.rank.rank),cy=Y(p.rank.ivp);
+      const t=`${p.short} · #${p.rank.rank} · ${p.rank.ivp}% interviewed (${p.rank.iv}/${p.rank.apps}) · ${S.l}${p.signal?" · signaled":""}`;
+      if(p.signal)s+=`<circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="${css("--accent")}" stroke-width="1.5"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="5.5" fill="${css(S.c)}" stroke="${css("--surface")}" stroke-width="1" data-tip="${esc(t)}" data-open="${p.id}" style="cursor:pointer"/>`;
+      if(["interview","interviewed"].includes(st(p.id).status))s+=`<text x="${cx+11}" y="${cy+4}" style="fill:${css("--ink")}">${esc(p.short)}</text>`;
+    });
+    $("#chScatter").innerHTML=s+"</svg>";
+  }
+  // Step 2 histogram
+  {
+    const G=DATA.admitGlobal,mine=G.mineS2,all=G.s2;
+    const lo=225,hi=285,bin=3,nb=(hi-lo)/bin;
+    const hist=a=>{const h=Array(nb).fill(0);a.forEach(v=>{const i=Math.min(nb-1,Math.max(0,Math.floor((v-lo)/bin)));h[i]++});return h.map(x=>x/a.length)};
+    const hm=hist(mine),ha=hist(all),mx=Math.max(...hm,...ha);
+    const W=520,H=230,pl=34,pr=10,pt=10,pb=34,bw=(W-pl-pr)/nb;
+    const Y=v=>pt+(H-pt-pb)*(1-v/mx),X=v=>pl+(W-pl-pr)*(v-lo)/(hi-lo);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Step 2 of invited applicants">`;
+    [0,.05,.1,.15,.2].forEach(v=>{if(v>mx)return;s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--line")}"/><text x="${pl-5}" y="${Y(v)+3}" text-anchor="end">${Math.round(v*100)}%</text>`});
+    hm.forEach((v,i)=>{s+=`<rect x="${pl+i*bw+1}" y="${Y(v)}" width="${bw-2}" height="${Y(0)-Y(v)}" fill="${css("--accent")}" opacity=".85" data-tip="Step 2 ${lo+i*bw/bw*bin}–${lo+i*bin+bin-1}: ${Math.round(v*100)}% of invites at your programs, ${Math.round(ha[i]*100)}% of all invites"/>`});
+    let path="";ha.forEach((v,i)=>{const x=pl+i*bw,y=Y(v);path+=(i?"L":"M")+x+" "+y+"L"+(x+bw)+" "+y});
+    s+=`<path d="${path}" fill="none" stroke="${css("--ink")}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    for(let v=lo;v<=hi;v+=10)s+=`<text x="${X(v)}" y="${H-18}" text-anchor="middle">${v}</text>`;
+    const my=+profile.s2||0;
+    if(my>=lo&&my<=hi){s+=`<line x1="${X(my)}" x2="${X(my)}" y1="${pt}" y2="${Y(0)}" stroke="${css("--s-awaiting")}" stroke-width="2"/><text x="${X(my)+4}" y="${pt+10}" style="fill:${css("--ink")}">You · ${my}</text>`}
+    s+=`<rect x="${pl}" y="${H-12}" width="10" height="8" fill="${css("--accent")}"/><text x="${pl+14}" y="${H-4}">Invites at your 45 programs (n=${mine.length})</text><line x1="${pl+250}" x2="${pl+270}" y1="${H-8}" y2="${H-8}" stroke="${css("--ink")}" stroke-dasharray="4 3" stroke-width="1.5"/><text x="${pl+275}" y="${H-4}">All Admit invite reports (n=${all.length})</text>`;
+    $("#chS2").innerHTML=s+"</svg>";
+    const med=a=>{const b=a.slice().sort((x,y)=>x-y);return b.length%2?b[(b.length-1)/2]:(b[b.length/2-1]+b[b.length/2])/2};
+    let note=`Median Step 2 of reported invitees: ${med(mine)} at your programs, ${med(all)} across all ${G.programs} programs on Admit.org. ${G.img} of ${G.n} reports (${(G.img/G.n*100).toFixed(1)}%) came from IMGs.`;
+    if(my){const pct=Math.round(mine.filter(v=>v<=my).length/mine.length*100);note+=` Your ${my} is at or above ${pct}% of invitees at your programs.`}
+    $("#s2Note").textContent=note;
+  }
+  document.querySelectorAll("[data-tip]").forEach(n=>{n.onmousemove=e=>showTip(e,esc(n.dataset.tip));n.onmouseleave=hideTip});
+  document.querySelectorAll("[data-open]").forEach(n=>n.onclick=()=>{ui.open=n.dataset.open;renderTable();document.querySelector(`tr[data-row="${n.dataset.open}"]`)?.scrollIntoView({behavior:"smooth",block:"center"})});
+}
+
+/* ---------- table ---------- */
+function filtered(){
+  const q=ui.q.trim().toLowerCase();
+  return PROGS.filter(p=>{
+    const s=st(p.id);
+    if(ui.status!=="all"&&s.status!==ui.status)return false;
+    if(ui.state!=="all"&&p.state!==ui.state)return false;
+    if(ui.sig==="yes"&&!p.signal)return false;if(ui.sig==="no"&&p.signal)return false;
+    if(q&&!(p.name+" "+p.short+" "+p.city+" "+p.state).toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>{
+    const k=ui.sort.k,d=ui.sort.dir;let va,vb;
+    if(k==="status"){const o=STATUSES.map(s=>s.k);va=o.indexOf(st(a.id).status);vb=o.indexOf(st(b.id).status)}
+    else if(k==="signal"){va=a.signal?0:1;vb=b.signal?0:1}
+    else if(k==="img"){va=-a.imgAny;vb=-b.imgAny}
+    else if(k==="rank"){va=a.rank?.rank??999;vb=b.rank?.rank??999}
+    else if(k==="admitN"){va=-a.admit.n;vb=-b.admit.n}
+    else if(k==="tracks"){va=a.tracks.length;vb=b.tracks.length}
+    else{va=(a[k]||"zz");vb=(b[k]||"zz")}
+    return (va<vb?-1:va>vb?1:a.short.localeCompare(b.short))*d;
+  });
+}
+function statusSelect(id,s){
+  return `<select class="stsel" data-id="${id}" aria-label="Status for ${esc(BYID[id].short)}" ${readOnly?"disabled":""}>${STATUSES.map(o=>`<option value="${o.k}" ${o.k===s.status?"selected":""}>${o.l}</option>`).join("")}</select>`;
+}
+function detailHTML(p){
+  const s=st(p.id),f=FACULTY[p.id]||{};
+  const flags=[];
+  if(p.prelimOut)flags.push(`<span class="pill">Prelim invites out ${p.prelimOut}</span>`);
+  if(p.waitReported)flags.push(`<span class="pill warn">${esc(p.waitReported)}</span>`);
+  if(p.rejReported)flags.push(`<span class="pill bad">Rejection wave reported ${p.rejReported}</span>`);
+  const ivEv=EVENTS.filter(e=>e.prog===p.id);
+  return `<div class="dgrid">
+   <div style="min-width:0;display:grid;gap:14px">
+     <div><h3>${esc(p.name)}</h3><div class="muted">${esc(p.city)}, ${p.state} · ${p.tracks.join(" · ")}${p.pd?` · PD ${esc(p.pd)}`:""}${p.mode?` · ${esc(p.mode)}`:""}</div>${flags.length?`<div class="waves" style="margin-top:6px">${flags.join("")}</div>`:""}</div>
+     ${ivEv.length?`<div><h3>On your calendar</h3><ul class="tight">${ivEv.map(e=>`<li>${new Date(e.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/New_York"})} — ${esc(e.t.split(" — ")[1]||e.t)}</li>`).join("")}</ul></div>`:""}
+     ${f.confirmed?`<div><h3>Confirmed faculty</h3><ul class="tight">${f.confirmed.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+     ${f.grid?`<div><h3>${p.id==="uth"?"On the interview grid (not assigned)":"Potential faculty"}</h3><ul class="tight">${f.grid.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+     ${f.format?`<div><h3>Format & questions reported</h3><p style="margin:0">${esc(f.format)}. ${esc(f.qs)}</p></div>`:""}
+     ${f.todo?`<div><h3>Before the interview</h3><p style="margin:0">${esc(f.todo)}</p></div>`:""}
+     ${p.rank?`<div><h3>Admit.org ranking</h3><p style="margin:0">${p.rank.rank?"#"+p.rank.rank:"Unranked"} · ${p.rank.apps??"—"} Admit applicants · ${p.rank.iv??"—"} interviews${p.rank.ivp!=null?` (${p.rank.ivp}%)`:""} · ${p.rank.m??"—"} matched${p.rank.med2?` · median Step 2 ${p.rank.med2}`:""}</p></div>`:""}
+     <div><h3>Admit.org invite reports (${p.admit.n})</h3>${p.admit.n?`<div style="max-height:240px;overflow:auto"><table class="mini"><thead><tr><th>Date</th><th>Step 2</th><th>Research</th><th>Degree</th><th>Signal</th></tr></thead><tbody>${p.admit.rows.map(r=>`<tr><td class="mono">${md(r[0])}</td><td class="mono">${r[1]??"—"}</td><td class="mono">${r[2]??"—"}</td><td>${esc(r[3]??"—")}</td><td>${r[4]==="yes"?"Yes":r[4]==="no"?"No":"—"}</td></tr>`).join("")}</tbody></table></div>${p.admit.url?`<a href="${p.admit.url}" target="_blank" rel="noopener" style="font-size:12.5px">Open on Admit.org</a>`:""}`:`<p class="muted" style="margin:0">No reports.</p>`}</div>
+     <div><h3>Spreadsheet invite reports (${p.entries.length})</h3>${p.entries.length?`<div class="entries">${p.entries.map(e=>`<div><span class="mono">${md(e.d)}</span> ${esc(e.t)}</div>`).join("")}</div>`:`<p class="muted" style="margin:0">No entries on II by Date${p.waves.length?`; II by Program lists invites dropping ${p.waves.map(md).join(", ")}`:""}.</p>`}</div>
+   </div>
+   <div style="min-width:0">
+     <h3>Your update</h3>
+     <div class="form" data-form="${p.id}">
+       <label>Status${statusSelect(p.id,s).replace('class="stsel"','id="f-st-'+p.id+'"')}</label>
+       <div class="row2">
+         <label>Track<select id="f-tr-${p.id}" ${readOnly?"disabled":""}>${["","Categorical","Prelim","Both"].map(t=>`<option ${t===s.track?"selected":""} value="${t}">${t||"—"}</option>`).join("")}</select></label>
+         <label>Interview date<input type="date" id="f-dt-${p.id}" value="${esc(s.ivDate)}" ${readOnly?"disabled":""}></label>
+       </div>
+       <label>Notes (interviewers, impressions, thank-you notes, LOI)<textarea id="f-nt-${p.id}" ${readOnly?"disabled":""}>${esc(s.note)}</textarea></label>
+       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="savebtn" data-save="${p.id}" ${readOnly?"disabled":""}>Save update</button><span class="saved" id="sv-${p.id}">${saved[p.id]?.updatedAt?"Saved "+new Date(saved[p.id].updatedAt).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):""}</span></div>
+     </div>
+   </div></div>`;
+}
+function renderTable(){
+  const rows=filtered();
+  $("#count").textContent=`${rows.length} of 45 shown`;
+  const latest=p=>p.waves.length?p.waves[p.waves.length-1]:null;
+  $("#tbody").innerHTML=rows.map(p=>{
+    const s=st(p.id),S=SMAP[s.status];
+    const w=p.waves.length?p.waves.map(x=>`<span class="pill${x>="11-02"?" warn":""}">${md(x)}</span>`).join(""):`<span class="muted">none reported</span>`;
+    const extra=[p.rejReported?`<span class="pill bad">rej. ${p.rejReported}</span>`:"",p.prelimOut?`<span class="pill">prelim ${p.prelimOut}</span>`:""].join("");
+    return `<tr class="row${ui.open===p.id?" open":""}" data-row="${p.id}" tabindex="0" aria-expanded="${ui.open===p.id}">
+      <td class="stripe" style="background:var(${S.c})"></td>
+      <td><div class="pname">${esc(p.short)}</div><div class="loc">${esc(p.city)}, ${p.state}</div></td>
+      <td>${p.signal?`<span class="pill sig">Signal</span>`:`<span class="muted">—</span>`}</td>
+      <td class="mono" style="font-size:12px">${p.tracks.map(t=>t[0]==="C"?"Cat":"Prelim").join(" + ")}</td>
+      <td>${statusSelect(p.id,s)}${s.ivDate&&["interview","interviewed"].includes(s.status)?`<div class="loc mono">${s.track||""} · ${new Date(s.ivDate+"T12:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>`:""}</td>
+      <td><div class="waves">${w}${extra}</div></td>
+      <td class="mono num" style="font-size:12.5px">${p.rank?.rank?"#"+p.rank.rank:"—"}${p.rank?.ivp!=null?`<div class="loc">${p.rank.ivp}% interviewed</div>`:""}</td>
+      <td class="num" style="font-size:12.5px">${p.admit.n?`<b>${p.admit.n}</b> <span class="muted">reports</span><div class="loc mono">Step 2 med ${p.admit.med2??"—"} · ${Math.round(p.admit.sig/p.admit.n*100)}% signaled</div>`:`<span class="muted">—</span>`}</td>
+      <td>${p.imgAny?`<span class="pill img">${p.imgAny} IMG</span>`:`<span class="muted">—</span>`}</td>
+      <td style="font-size:12.5px">${esc(p.mode||"—")}</td></tr>
+      ${ui.open===p.id?`<tr class="detail"><td colspan="10">${detailHTML(p)}</td></tr>`:""}`;
+  }).join("")||`<tr><td colspan="10" class="muted" style="padding:20px">No programs match these filters.</td></tr>`;
+  document.querySelectorAll("tr.row").forEach(tr=>{
+    const toggle=e=>{if(e.target.closest("select"))return;ui.open=ui.open===tr.dataset.row?null:tr.dataset.row;renderTable()};
+    tr.onclick=toggle;tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle(e)}};
+  });
+  document.querySelectorAll("#tbody select.stsel").forEach(sel=>{sel.onclick=e=>e.stopPropagation();sel.onchange=()=>save(sel.dataset.id,{status:sel.value})});
+  document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>{const id=b.dataset.save;save(id,{status:$("#f-st-"+id).value,track:$("#f-tr-"+id).value,ivDate:$("#f-dt-"+id).value,note:$("#f-nt-"+id).value})});
+  document.querySelectorAll("thead th[data-k]").forEach(th=>{th.setAttribute("aria-sort",ui.sort.k===th.dataset.k?(ui.sort.dir>0?"ascending":"descending"):"none")});
+}
+document.querySelectorAll("thead th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;ui.sort=ui.sort.k===k?{k,dir:-ui.sort.dir}:{k,dir:1};renderTable()});
+$("#fStatus").innerHTML=`<option value="all">All statuses</option>`+STATUSES.map(s=>`<option value="${s.k}">${s.l}</option>`).join("");
+$("#fState").innerHTML=`<option value="all">All states</option>`+[...new Set(PROGS.map(p=>p.state))].sort().map(s=>`<option>${s}</option>`).join("");
+$("#fStatus").onchange=e=>{ui.status=e.target.value;renderStack();renderTable()};
+$("#fState").onchange=e=>{ui.state=e.target.value;renderTable()};
+$("#q").oninput=e=>{ui.q=e.target.value;renderTable()};
+document.querySelectorAll(".seg [data-sig]").forEach(b=>b.onclick=()=>{ui.sig=b.dataset.sig;document.querySelectorAll(".seg [data-sig]").forEach(x=>x.setAttribute("aria-pressed",x===b));renderTable()});
+
+function renderAll(){renderClocks();renderKPIs();renderStack();renderCal();renderWatch();renderCharts();renderTable()}
+
+/* ---------- theme ---------- */
+const TKEY="gs-match-theme";
+function currentTheme(){const a=document.documentElement.getAttribute("data-theme");if(a)return a;return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}
+function paintThemeBtn(){const t=currentTheme();$("#themeBtn").innerHTML=t==="dark"?`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Day theme`:`<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Dark theme`}
+try{const t=localStorage.getItem(TKEY);if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}
+$("#themeBtn").onclick=()=>{const t=currentTheme()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",t);try{localStorage.setItem(TKEY,t)}catch(e){}paintThemeBtn();renderAll()};
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{paintThemeBtn();renderAll()});
+paintThemeBtn();
+
+/* ---------- persistence ---------- */
+function setSync(cls,txt){const el=$("#sync");el.className="sync "+cls;el.lastElementChild.textContent=txt}
+const LKEY="gs-match-board-v1";
+let profile={};
+$("#myS2").onchange=e=>{const v=e.target.value.trim();saveProfile({s2:v?+v:null})};
+function paintProfile(){if(document.activeElement!==$("#myS2"))$("#myS2").value=profile.s2??""}
+
+/* GitHub Pages backend: state.json in the repo that serves the page */
+const GH=(()=>{
+  const h=location.hostname;if(!/\.github\.io$/i.test(h))return null;
+  const owner=h.split(".")[0];const seg=location.pathname.split("/").filter(Boolean);
+  const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`;
+  return {owner,repo,path:"state.json",api:`https://api.github.com/repos/${owner}/${repo}/contents/state.json`};
+})();
+const TOKKEY="gs-match-gh-token";
+function ghToken(){try{return localStorage.getItem(TOKKEY)||""}catch(e){return ""}}
+const b64e=s=>btoa(unescape(encodeURIComponent(s))), b64d=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,""))));
+async function ghRead(){
+  const tok=ghToken();const r=await fetch(GH.api+"?ref=main&t="+Date.now(),{headers:Object.assign({Accept:"application/vnd.github+json"},tok?{Authorization:"Bearer "+tok}:{}),cache:"no-store"});
+  if(r.status===404)return {state:{programs:{},profile:{}},sha:null};
+  if(!r.ok)throw new Error("read "+r.status);
+  const j=await r.json();return {state:JSON.parse(b64d(j.content)),sha:j.sha};
+}
+async function ghWrite(mutate){
+  const tok=ghToken();if(!tok)throw {code:"no_token"};
+  for(let i=0;i<3;i++){
+    const {state,sha}=await ghRead();state.programs??={};state.profile??={};mutate(state);state.updatedAt=new Date().toISOString();
+    const r=await fetch(GH.api,{method:"PUT",headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+tok},body:JSON.stringify({message:"Update match board state",content:b64e(JSON.stringify(state,null,1)),branch:"main",...(sha?{sha}:{})})});
+    if(r.ok)return state;
+    if(r.status===409||r.status===422)continue;
+    throw {code:r.status===401||r.status===403?"auth":"http",status:r.status};
+  }
+  throw {code:"conflict"};
+}
+function applyState(s){saved={};Object.entries(s.programs||{}).forEach(([k,v])=>{if(BYID[k])saved[k]=v});profile=s.profile||{};paintProfile();renderAll()}
+
+async function persist(kind,id,doc){
+  if(store?.kind==="db"){
+    if(kind==="program")await store.db.doc("programs/"+id).set(doc);else await store.db.doc("profile/me").set(doc);
+    setSync("ok","Saved · synced across your devices");
+  }else if(store?.kind==="github"){
+    setSync("","Saving to GitHub…");
+    const s=await ghWrite(st=>{if(kind==="program")st.programs[id]=doc;else st.profile=doc});
+    applyState(s);setSync("ok","Saved to GitHub · other devices update within a minute");
+  }else{
+    localStorage.setItem(LKEY,JSON.stringify({programs:saved,profile}));setSync("warn","Saved in this browser only");
+  }
+}
+function saveErr(e){
+  if(e&&e.code==="invalid_argument"){readOnly=true;setSync("warn","View only — you can't save changes here");renderAll()}
+  else if(e&&e.code==="no_token"){setSync("warn","Not saved — add a GitHub token in Sync settings");$("#ghPanel").hidden=false}
+  else if(e&&e.code==="auth"){setSync("warn","Not saved — GitHub refused the token (check it can write Contents)");$("#ghPanel").hidden=false}
+  else setSync("warn","Couldn't save just now — try again");
+}
+async function save(id,patch){
+  const doc=Object.assign({},st(id),patch,{updatedAt:new Date().toISOString()});
+  saved[id]=doc;renderAll();
+  try{await persist("program",id,doc)}catch(e){saveErr(e)}
+}
+async function saveProfile(patch){
+  profile=Object.assign({},profile,patch);renderCharts();
+  try{await persist("profile",null,profile)}catch(e){saveErr(e)}
+}
+function useLocal(){
+  store={kind:"local"};
+  try{const j=JSON.parse(localStorage.getItem(LKEY)||"{}");saved=j.programs||j||{};profile=j.profile||{};if(!j.programs){Object.keys(saved).forEach(k=>{if(!BYID[k])delete saved[k]})}}catch(e){saved={}}
+  paintProfile();setSync("warn","Updates save in this browser only");renderAll();
+}
+async function useGitHub(){
+  store={kind:"github"};$("#ghBtn").hidden=false;
+  $("#ghToken").value=ghToken();
+  const pull=async(quiet)=>{try{const {state}=await ghRead();applyState(state);if(!quiet||$("#sync").classList.contains("warn"))setSync(ghToken()?"ok":"warn",ghToken()?"Synced with GitHub":"Read-only on this device — add a token in Sync settings to save")}catch(e){setSync("warn","Couldn't reach GitHub — showing the last loaded data")}};
+  await pull(false);
+  let lastPull=Date.now();setInterval(()=>{const gap=ghToken()?60000:300000;if(Date.now()-lastPull>=gap&&!document.hidden&&!document.activeElement?.matches?.("textarea,input")){lastPull=Date.now();pull(true)}},15000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull(true)});
+}
+$("#ghBtn").onclick=()=>{$("#ghPanel").hidden=!$("#ghPanel").hidden};
+$("#ghSave").onclick=async()=>{const v=$("#ghToken").value.trim();try{localStorage.setItem(TOKKEY,v)}catch(e){}
+  $("#ghMsg").textContent="Checking…";
+  try{const r=await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}`,{headers:{Authorization:"Bearer "+v,Accept:"application/vnd.github+json"}});const j=await r.json();
+    if(r.ok&&j.permissions?.push){$("#ghMsg").textContent="Token works. Saving is on for this device.";setSync("ok","Synced with GitHub");setTimeout(()=>$("#ghPanel").hidden=true,1500)}
+    else $("#ghMsg").textContent=r.ok?"This token can read but not write the repo.":"GitHub rejected this token ("+r.status+").";
+  }catch(e){$("#ghMsg").textContent="Couldn't reach GitHub."}};
+$("#ghForget").onclick=()=>{try{localStorage.removeItem(TOKKEY)}catch(e){}$("#ghToken").value="";$("#ghMsg").textContent="Removed.";setSync("warn","Read-only on this device — add a token in Sync settings to save")};
+
+renderAll();
+(async()=>{
+  if(GH){useGitHub();return}
+  let db=null;
+  try{db=await (window.claude?.use?window.claude.use("db"):null)}catch(e){db=null}
+  if(!db){useLocal();return}
+  store={kind:"db",db};
+  try{const u=await window.claude.use("user");if(u&&typeof u.can==="function"){const c=await u.can("data.write");if(c===false){readOnly=true}}}catch(e){}
+  const timer=setTimeout(()=>setSync("warn","Saved updates can't be reached yet — showing defaults"),10000);
+  db.collection("programs").onSnapshot(snap=>{
+    const next={};snap.docs.forEach(d=>{if(BYID[d.id])next[d.id]=d.data()});saved=next;
+    if(!snap.metadata.fromCache){clearTimeout(timer);setSync(readOnly?"warn":"ok",readOnly?"View only":"Synced · updates save for every device")}
+    renderAll();
+  },err=>{clearTimeout(timer);setSync("warn","Sync stopped — reload to reconnect")});
+  db.doc("profile/me").onSnapshot(snap=>{profile=snap.exists?snap.data():{};paintProfile();renderCharts()},()=>{});
+})();
+setInterval(()=>{renderClocks();renderKPIs()},60000);
+</script>
+
+</body>
+</html>
